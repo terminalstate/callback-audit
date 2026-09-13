@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "callback-audit"
+version = "0.1.0"
+description = "Read-only audit of webhook/callback delivery: where payments stop short of a terminal state."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "terminalstate" }]
+keywords = ["webhooks", "callbacks", "payments", "idempotency", "reconciliation", "audit"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: System :: Monitoring",
+]
+dependencies = []
+
+[project.scripts]
+callback-audit = "callback_audit.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/terminalstate/callback-audit"
+Issues = "https://github.com/terminalstate/callback-audit/issues"
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5"]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.5"]
+
+[tool.setuptools.packages.find]
+include = ["callback_audit*"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]  # the formatter handles code; long human-readable strings are fine
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
