@@ -16,7 +16,7 @@ from .report import to_json, to_markdown
 from .timeparse import TimeParseError, parse_ts
 
 DEFAULT_PATTERNS = {
-    "signature": r"signature (mismatch|invalid|verification failed|failed)|invalid signature|bad signature|hmac (mismatch|invalid)",
+    "signature": r"signature[_ ](mismatch|invalid|verification failed|failed)|invalid signature|bad signature|hmac[_ ](mismatch|invalid)",
     "unknown_status": r"unknown status|no status mapping|unknown event|validation ?error|unmapped status|unexpected status",
 }
 
