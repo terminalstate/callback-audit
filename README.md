@@ -19,6 +19,10 @@ pip install git+https://github.com/terminalstate/callback-audit
 callback-audit --demo
 ```
 
+## A worked case
+
+[A real "orders stuck in pending" bug in woocommerce-gateway-stripe](docs/case-woocommerce-stripe-204.md) (v11.0.0): a webhook that fails signature validation is answered **HTTP 204**, so Stripe marks it delivered and never retries and the order sits in `pending` while Stripe shows it succeeded. Reproduced against the plugin's own handler, then found by this tool at stations 5 and 7 — while every HTTP response stayed 2xx.
+
 ## The seven stations
 
 | # | Station | Typical cause | What the tool checks |
