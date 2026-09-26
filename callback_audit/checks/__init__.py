@@ -18,6 +18,8 @@ class Options:
     rapid_chain_seconds: int = 60  # N transitions of one payment inside this window = manual flipping
     rapid_chain_len: int = 3
     top_n: int = 10  # how many example ids to print per finding
+    success: set[str] | None = None  # local statuses that mean the money arrived; enables the outcome check
+    provider_success: set[str] | None = None  # the same, as the provider names them
 
 
 @dataclass

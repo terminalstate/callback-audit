@@ -1,0 +1,7 @@
+2026-09-21T14:03:59+00:00 DEBUG Webhook received (payment_intent.succeeded)
+2026-09-21T14:04:00+00:00 ERROR Webhook validation failed (signature_mismatch)
+2026-09-21T14:04:01+00:00 ERROR Webhook validation failed (signature_mismatch)
+2026-09-22T08:55:43+00:00 DEBUG Webhook received (payment_intent.succeeded)
+2026-09-22T08:55:43+00:00 ERROR Webhook validation failed (signature_mismatch)
+2026-09-22T16:22:11+00:00 DEBUG Webhook received (payment_intent.succeeded)
+2026-09-22T16:22:11+00:00 ERROR Webhook validation failed (signature_mismatch)

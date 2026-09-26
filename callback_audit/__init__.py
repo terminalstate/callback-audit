@@ -8,4 +8,4 @@ Everything here reads exports (CSV, access logs, application logs) and prints a
 report. Nothing connects to a database, nothing writes, nothing calls the network.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

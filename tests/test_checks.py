@@ -170,6 +170,62 @@ def test_sequence_without_payments_still_checks_reuse_and_order():
     assert by_check(fs, sequence.CHECK_REUSE).verdict == "ok"
 
 
+def paid_ctx(events, payments):
+    c = ctx(events=events, payments=payments)
+    c.options.success = {"processing", "completed"}
+    c.options.provider_success = {"succeeded"}
+    return c
+
+
+def sev(pid, at, status, terminal, ref=""):
+    return Event(payment_id=pid, at=at, status=status, terminal=terminal, ref=ref)
+
+
+def test_outcome_paid_at_provider_cancelled_locally():
+    t0 = NOW - timedelta(days=3)
+    events = [
+        sev("lost", t0, "succeeded", True, "pi_1"),
+        sev("refunded", t0, "succeeded", True, "ch_2"),
+        sev("refunded", t0 + timedelta(hours=1), "refunded", True, "ch_2"),  # same object, refunded later: not a loss
+        sev("retry", t0, "succeeded", True, "pi_3"),
+        sev("retry", t0 + timedelta(hours=1), "canceled", True, "pi_4"),  # a second attempt, cancelled: the first still paid
+        sev("fine", t0, "succeeded", True, "pi_5"),
+    ]
+    payments = [
+        pay("lost", 72, "cancelled", True),
+        pay("refunded", 72, "cancelled", True),
+        pay("retry", 72, "failed", True),
+        pay("fine", 72, "completed", True),
+    ]
+    f = by_check(sequence.run(paid_ctx(events, payments)), sequence.CHECK_OUTCOME)
+    assert f.verdict == "suspect" and f.summary.startswith("2 payments succeeded at the provider")
+    assert "lost" in f.details[1] and "retry" in f.details[1] and "refunded" not in f.details[1]
+
+
+def test_outcome_without_refs_uses_the_last_terminal_event():
+    t0 = NOW - timedelta(days=1)
+    events = [sev("a", t0, "succeeded", True), sev("a", t0 + timedelta(minutes=5), "refunded", True), sev("b", t0, "succeeded", True)]
+    payments = [pay("a", 24, "cancelled", True), pay("b", 24, "cancelled", True)]
+    f = by_check(sequence.run(paid_ctx(events, payments)), sequence.CHECK_OUTCOME)
+    assert f.summary.startswith("1 payment succeeded at the provider but is closed") and f.details[1] == "examples: b"
+
+
+def test_outcome_needs_success_statuses():
+    fs = sequence.run(ctx(events=[sev("a", NOW, "succeeded", True)], payments=[pay("a", 1, "cancelled", True)]))
+    f = by_check(fs, sequence.CHECK_OUTCOME)
+    assert f.verdict == "na" and "--success" in f.summary
+
+
+def test_terminal_mismatch_counts_and_lists_provider_successes_first():
+    t0 = NOW - timedelta(days=2)
+    events = [sev("early", t0, "canceled", True, "pi_1"), sev("paid", t0 + timedelta(hours=1), "succeeded", True, "pi_2")]
+    payments = [pay("early", 48, "pending"), pay("paid", 47, "on-hold")]
+    f = by_check(sequence.run(paid_ctx(events, payments)), sequence.CHECK_TERMINAL)
+    assert "; 1 of them succeeded at the provider" in f.summary
+    assert f.details[1] == "examples: paid, early"
+    assert f.next_step.startswith("Start with the ones that succeeded")
+
+
 def tr(pid, at, a, b):
     return Transition(payment_id=pid, at=at, from_status=a, to_status=b)
 

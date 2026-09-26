@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "callback-audit"
-version = "0.1.0"
+version = "0.2.0"
 description = "Read-only audit of webhook/callback delivery: where payments stop short of a terminal state."
 readme = "README.md"
 license = { text = "MIT" }

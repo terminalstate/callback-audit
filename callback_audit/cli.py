@@ -10,6 +10,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import __version__
+from .adapters import join_notes
+from .adapters import stripe as stripe_adapter
+from .adapters import woocommerce as woo_adapter
 from .checks import Context, Options, run_all
 from .readers import InputError, count_log_patterns, read_deliveries, read_events, read_history, read_inbound, read_payments
 from .report import to_json, to_markdown
@@ -38,6 +41,11 @@ def build_parser() -> argparse.ArgumentParser:
             "  --app-log    application log, plain text, one line per record\n"
             "  --history    CSV: payment_id,at,from_status,to_status\n"
             "\n"
+            "platform exports (instead of --payments/--events):\n"
+            "  --woo-orders CSV of WooCommerce orders: id or number, status, date_created_gmt[, payment_method, type]\n"
+            "  --stripe     Stripe payments: Dashboard export (CSV, with metadata columns) or API JSON\n"
+            "  e.g.  callback-audit --stripe stripe-payments.csv --woo-orders orders.csv\n"
+            "\n"
             "try it:  callback-audit --demo\n"
         ),
     )
@@ -49,6 +57,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--deliveries", type=Path)
     p.add_argument("--events", type=Path)
     p.add_argument("--provider-terminal", help="terminal statuses as the provider names them (defaults to --terminal)")
+    p.add_argument("--success", help="comma-separated local statuses that mean the money arrived; enables the provider-success check")
+    p.add_argument("--provider-success", help="the same, as the provider names them (defaults to --success)")
     p.add_argument("--inbound", type=Path)
     p.add_argument("--path-filter", help="keep only inbound requests whose path contains this substring, e.g. /webhooks/")
     p.add_argument("--app-log", type=Path)
@@ -63,6 +73,19 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--stuck-hours", type=float, default=24.0, help="a non-terminal payment older than this is stuck (default 24)")
     p.add_argument("--top", type=int, default=10, help="example ids to print per finding (default 10)")
     p.add_argument("--json", action="store_true", help="print JSON instead of Markdown")
+
+    g = p.add_argument_group("platform exports", "read a platform's own exports instead of --payments / --events")
+    g.add_argument("--woo-orders", type=Path, help="WooCommerce orders CSV (replaces --payments)")
+    g.add_argument(
+        "--stripe", type=Path, help="Stripe payments export: Dashboard CSV with metadata columns, or API JSON (replaces --events)"
+    )
+    g.add_argument(
+        "--site-url", help="with --stripe: keep payments whose site_url metadata contains this (one Stripe account, several stores)"
+    )
+    g.add_argument(
+        "--stripe-order-key", default="order_id", help="with --stripe: metadata key holding the order number (default: order_id)"
+    )
+    g.add_argument("--all-gateways", action="store_true", help="with --woo-orders: keep orders of every payment method, not only Stripe")
     return p
 
 
@@ -84,6 +107,7 @@ def _demo_args(args: argparse.Namespace) -> argparse.Namespace:
     args.app_log = paths["app.log"]
     args.history = paths["history.csv"]
     args.terminal = args.terminal or "succeeded,failed,canceled,expired"
+    args.success = args.success or "succeeded"
     args.path_filter = args.path_filter or "/webhooks/"
     args.now = args.now or DEMO_NOW.isoformat()
     return args
@@ -95,7 +119,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.demo:
         args = _demo_args(args)
 
-    if not any((args.payments, args.deliveries, args.events, args.inbound, args.app_log, args.history)):
+    if args.woo_orders and args.payments:
+        parser.error("--woo-orders replaces --payments; give one of them")
+    if args.stripe and args.events:
+        parser.error("--stripe replaces --events; give one of them")
+    if not any((args.payments, args.deliveries, args.events, args.inbound, args.app_log, args.history, args.woo_orders, args.stripe)):
         parser.print_help()
         return 2
 
@@ -104,19 +132,35 @@ def main(argv: list[str] | None = None) -> int:
     except TimeParseError as exc:
         parser.error(str(exc))
 
-    terminal = _statuses(args.terminal)
-    provider_terminal = _statuses(args.provider_terminal) or terminal
+    terminal = _statuses(args.terminal) or (set(woo_adapter.TERMINAL) if args.woo_orders else None)
+    success = _statuses(args.success) or (set(woo_adapter.SUCCESS) if args.woo_orders else None)
+    provider_terminal = _statuses(args.provider_terminal) or (set(stripe_adapter.TERMINAL) if args.stripe else terminal)
+    provider_success = _statuses(args.provider_success) or (set(stripe_adapter.SUCCESS) if args.stripe else success)
     patterns = {
         "signature": re.compile(args.signature_pattern, re.IGNORECASE),
         "unknown_status": re.compile(args.unknown_status_pattern, re.IGNORECASE),
     }
 
-    ctx = Context(options=Options(now=now, stuck_hours=args.stuck_hours, top_n=args.top), log_patterns=patterns)
+    options = Options(now=now, stuck_hours=args.stuck_hours, top_n=args.top, success=success, provider_success=provider_success)
+    ctx = Context(options=options, log_patterns=patterns)
     inputs: dict[str, str] = {}
+    notes: list[str] = []
     try:
         if args.payments:
             ctx.payments = read_payments(args.payments, terminal)
             inputs["payments"] = str(args.payments)
+        if args.woo_orders:
+            orders = woo_adapter.read_orders(args.woo_orders, terminal or woo_adapter.TERMINAL, all_gateways=args.all_gateways)
+            ctx.payments = orders.records
+            notes.extend(orders.notes)
+            inputs["woo_orders"] = str(args.woo_orders)
+        if args.stripe:
+            stripe = stripe_adapter.read_payments(
+                args.stripe, provider_terminal or stripe_adapter.TERMINAL, order_key=args.stripe_order_key, site_url=args.site_url
+            )
+            ctx.events = stripe.records
+            notes.extend(stripe.notes)
+            inputs["stripe"] = str(args.stripe)
         if args.deliveries:
             ctx.deliveries = read_deliveries(args.deliveries)
             inputs["deliveries"] = str(args.deliveries)
@@ -135,12 +179,19 @@ def main(argv: list[str] | None = None) -> int:
     except InputError as exc:
         print(f"callback-audit: {exc}", file=sys.stderr)
         return 1
-    if args.terminal:
-        inputs["terminal_statuses"] = args.terminal
+    if (args.woo_orders or args.stripe) and ctx.payments is not None and ctx.events is not None:
+        notes.extend(join_notes(ctx.payments, ctx.events, provider_success))
+    if args.terminal or args.woo_orders:
+        inputs["terminal_statuses"] = args.terminal or ",".join(sorted(terminal or ()))
+    if success:
+        inputs["success_statuses"] = ",".join(sorted(success))
+        if provider_success and provider_success != success:
+            inputs["success_statuses"] += " (provider: " + ",".join(sorted(provider_success)) + ")"
     ctx.inputs = inputs
 
     findings = run_all(ctx)
-    out = to_json(findings, now=now, inputs=inputs) if args.json else to_markdown(findings, now=now, inputs=inputs)
+    render = to_json if args.json else to_markdown
+    out = render(findings, now=now, inputs=inputs, notes=notes)
     sys.stdout.write(out)
     return 0
 

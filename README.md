@@ -19,6 +19,16 @@ pip install git+https://github.com/terminalstate/callback-audit
 callback-audit --demo
 ```
 
+## Paid in Stripe, pending in WooCommerce?
+
+```
+callback-audit --stripe stripe-payments.csv --woo-orders orders.csv
+```
+
+Two exports and no plugin. The report lists the orders that Stripe calls paid while WooCommerce
+still shows them as pending or on hold, or has already cancelled them. How to get the two files,
+and what to do with the list: [docs/woocommerce-stripe-paid-but-pending.md](docs/woocommerce-stripe-paid-but-pending.md).
+
 ## A worked case
 
 [A real "orders stuck in pending" bug in woocommerce-gateway-stripe](docs/case-woocommerce-stripe-204.md) (v11.0.0): a webhook that fails signature validation is answered **HTTP 204**, so Stripe marks it delivered and never retries and the order sits in `pending` while Stripe shows it succeeded. Reproduced against the plugin's own handler, then found by this tool at stations 5 and 7 — while every HTTP response stayed 2xx.
@@ -47,12 +57,15 @@ as `n/a` and says which input would answer them.
 |---|---|---|
 | `--payments` | CSV | `id, created_at, status` + optional `updated_at, provider, terminal` |
 | `--terminal` | list | your terminal statuses, e.g. `succeeded,failed,canceled,expired` (or give a boolean `terminal` column) |
-| `--events` | CSV | the provider's view: `payment_id, at, status` + optional `event_id, terminal` (most provider dashboards export this) |
+| `--events` | CSV | the provider's view: `payment_id, at, status` + optional `event_id, terminal, ref` (most provider dashboards export this; `ref` is the provider's own payment or charge id when one payment maps to several) |
 | `--provider-terminal` | list | terminal statuses as the provider names them (defaults to `--terminal`) |
 | `--inbound` | nginx combined log, or CSV `at, status_code[, path, remote, user_agent]` | requests that hit your webhook endpoint; use `--path-filter /webhooks/` to drop the rest |
 | `--app-log` | plain text | your application log; lines are matched against two regexes (`--signature-pattern`, `--unknown-status-pattern`), overridable |
 | `--history` | CSV | status history: `payment_id, at, from_status, to_status` |
 | `--deliveries` | CSV | *if you are the sender*: `payment_id, attempt` + optional `sent_at, response_code, response_body` |
+| `--success` | list | local statuses that mean the money arrived, e.g. `succeeded`; enables the "provider success, local terminal failure" check (`--provider-success` if the provider names them differently) |
+| `--woo-orders` | CSV | WooCommerce orders, instead of `--payments`: `id` or `number`, `status`, `date_created_gmt` + optional `payment_method, type` ([how to export](docs/woocommerce-stripe-paid-but-pending.md)) |
+| `--stripe` | CSV or JSON | Stripe payments, instead of `--events`: the Dashboard export with metadata columns, or API JSON; matched to orders by `order_id` metadata (`--stripe-order-key`, `--site-url`) |
 
 Timestamps: ISO 8601 (with or without offset), epoch seconds or milliseconds, or the
 access-log format. **Naive timestamps are interpreted as UTC.** Column names are matched

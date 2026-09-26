@@ -115,6 +115,7 @@ def read_events(path: Path, terminal_statuses: set[str] | None) -> list[Event]:
                 status=status,
                 terminal=_is_terminal(status, row, terminal_statuses, path),
                 event_id=row.get("event_id", "") or "",
+                ref=row.get("ref", "") or "",
             )
         )
     return out

@@ -39,6 +39,7 @@ class Event:
     status: str
     terminal: bool
     event_id: str = ""
+    ref: str = ""  # the provider's own object id (payment intent, charge) when one payment maps to several
 
 
 @dataclass(frozen=True)

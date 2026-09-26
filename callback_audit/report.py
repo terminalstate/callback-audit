@@ -11,15 +11,22 @@ from .model import STATIONS, Finding
 _MARK = {"suspect": "SUSPECT", "ok": "ok", "info": "info", "na": "n/a"}
 
 
-def to_markdown(findings: list[Finding], *, now: datetime, inputs: dict[str, str]) -> str:
+def to_markdown(findings: list[Finding], *, now: datetime, inputs: dict[str, str], notes: list[str] | None = None) -> str:
     lines: list[str] = []
     lines.append("# callback-audit report")
     lines.append("")
     lines.append(f"Generated at {now.isoformat()} (UTC), callback-audit {__version__}. Read-only: no database, no network, no writes.")
     lines.append("")
-    lines.append("Inputs: " + (", ".join(f"{k}={v}" for k, v in inputs.items() if k != "terminal_statuses") or "none"))
+    shown = {k: v for k, v in inputs.items() if k not in ("terminal_statuses", "success_statuses")}
+    lines.append("Inputs: " + (", ".join(f"{k}={v}" for k, v in shown.items()) or "none"))
     if inputs.get("terminal_statuses"):
         lines.append(f"Terminal statuses: {inputs['terminal_statuses']}")
+    if inputs.get("success_statuses"):
+        lines.append(f"Success statuses: {inputs['success_statuses']}")
+    if notes:
+        lines.append("")
+        lines.append("Notes on the inputs:")
+        lines.extend(f"- {n}" for n in notes)
     lines.append("")
 
     suspects = [f for f in findings if f.verdict == "suspect"]
@@ -61,12 +68,13 @@ def to_markdown(findings: list[Finding], *, now: datetime, inputs: dict[str, str
     return "\n".join(lines) + "\n"
 
 
-def to_json(findings: list[Finding], *, now: datetime, inputs: dict[str, str]) -> str:
+def to_json(findings: list[Finding], *, now: datetime, inputs: dict[str, str], notes: list[str] | None = None) -> str:
     payload = {
         "tool": "callback-audit",
         "version": __version__,
         "generated_at": now.isoformat(),
         "inputs": inputs,
+        "notes": list(notes or []),
         "stations": {str(k): v for k, v in STATIONS.items()},
         "findings": [f.as_dict() for f in findings],
     }
