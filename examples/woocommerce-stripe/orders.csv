@@ -13,3 +13,4 @@ id,status,date_created_gmt,payment_method,type
 1012,wc-completed,2026-09-25 13:44:18,stripe,shop_order
 1013,wc-cancelled,2026-09-25 17:05:41,stripe,shop_order
 1014,wc-on-hold,2026-09-26 09:30:12,stripe,shop_order
+1015,wc-pending,2026-09-24 11:02:30,stripe,shop_order

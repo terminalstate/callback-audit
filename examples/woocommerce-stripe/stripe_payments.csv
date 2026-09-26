@@ -1,16 +1,17 @@
-id,Created date (UTC),Amount,Amount Refunded,Currency,Captured,Status,PaymentIntent ID,order_id (metadata),site_url (metadata)
-ch_ex_1001,2026-09-20 09:12:31,49.00,0.00,usd,true,Paid,pi_ex_1001,1001,https://shop.example
-ch_ex_1002,2026-09-20 11:41:20,120.00,0.00,usd,true,Paid,pi_ex_1002,1002,https://shop.example
-ch_ex_1003,2026-09-21 14:03:59,35.50,0.00,usd,true,Paid,pi_ex_1003,1003,https://shop.example
-ch_ex_1004,2026-09-22 08:55:42,89.90,0.00,usd,true,Paid,pi_ex_1004,1004,https://shop.example
-py_ex_1005,2026-09-22 16:22:10,64.00,0.00,eur,true,Paid,pi_ex_1005,1005,https://shop.example
-pi_ex_1006,2026-09-23 10:02:40,22.00,0.00,usd,false,Incomplete,pi_ex_1006,1006,https://shop.example
-ch_ex_1007,2026-09-23 18:48:02,75.00,75.00,usd,true,Refunded,pi_ex_1007,1007,https://shop.example
-ch_ex_1008,2026-09-24 07:15:30,18.00,0.00,usd,false,Failed,pi_ex_1008,1008,https://shop.example
-ch_ex_1010,2026-09-24 20:12:01,54.00,54.00,usd,true,Refunded,pi_ex_1010,1010,https://shop.example
-ch_ex_1012a,2026-09-25 13:44:40,99.00,0.00,usd,false,Failed,pi_ex_1012,1012,https://shop.example
-ch_ex_1012b,2026-09-25 13:46:02,99.00,0.00,usd,true,Paid,pi_ex_1012,1012,https://shop.example
-ch_ex_1013,2026-09-25 17:06:10,140.00,40.00,usd,true,Paid,pi_ex_1013,1013,https://shop.example
-ch_ex_1014,2026-09-26 09:30:40,300.00,0.00,usd,false,Uncaptured,pi_ex_1014,1014,https://shop.example
-ch_ex_0999,2026-09-18 10:00:00,15.00,0.00,usd,true,Paid,pi_ex_0999,999,https://shop.example
-ch_ex_inv1,2026-09-21 00:05:00,29.00,0.00,usd,true,Paid,pi_ex_inv1,,
+id,Created date (UTC),Amount,Amount Refunded,Currency,Captured,Status,PaymentIntent ID,order_id (metadata),site_url (metadata),checkout_type (metadata)
+ch_ex_1001,2026-09-20 09:12:31,49.00,0.00,usd,true,Paid,pi_ex_1001,1001,https://shop.example,
+ch_ex_1002,2026-09-20 11:41:20,120.00,0.00,usd,true,Paid,pi_ex_1002,1002,https://shop.example,
+ch_ex_1003,2026-09-21 14:03:59,35.50,0.00,usd,true,Paid,pi_ex_1003,1003,https://shop.example,
+ch_ex_1004,2026-09-22 08:55:42,89.90,0.00,usd,true,Paid,pi_ex_1004,1004,https://shop.example,
+py_ex_1005,2026-09-22 16:22:10,64.00,0.00,eur,true,Paid,pi_ex_1005,1005,https://shop.example,
+pi_ex_1006,2026-09-23 10:02:40,22.00,0.00,usd,false,Incomplete,pi_ex_1006,1006,https://shop.example,
+ch_ex_1007,2026-09-23 18:48:02,75.00,75.00,usd,true,Refunded,pi_ex_1007,1007,https://shop.example,
+ch_ex_1008,2026-09-24 07:15:30,18.00,0.00,usd,false,Failed,pi_ex_1008,1008,https://shop.example,
+ch_ex_1010,2026-09-24 20:12:01,54.00,54.00,usd,true,Refunded,pi_ex_1010,1010,https://shop.example,
+ch_ex_1012a,2026-09-25 13:44:40,99.00,0.00,usd,false,Failed,pi_ex_1012,1012,https://shop.example,
+ch_ex_1012b,2026-09-25 13:46:02,99.00,0.00,usd,true,Paid,pi_ex_1012,1012,https://shop.example,
+ch_ex_1013,2026-09-25 17:06:10,140.00,40.00,usd,true,Paid,pi_ex_1013,1013,https://shop.example,
+ch_ex_1014,2026-09-26 09:30:40,300.00,0.00,usd,false,Uncaptured,pi_ex_1014,1014,https://shop.example,
+ch_ex_0999,2026-09-18 10:00:00,15.00,0.00,usd,true,Paid,pi_ex_0999,999,https://shop.example,
+ch_ex_inv1,2026-09-21 00:05:00,29.00,0.00,usd,true,Paid,pi_ex_inv1,,,
+ch_ex_ap1,2026-09-24 11:03:05,72.00,0.00,gbp,true,Paid,pi_ex_ap1,,https://shop.example,adaptive_pricing_checkout

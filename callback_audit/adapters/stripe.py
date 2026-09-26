@@ -22,13 +22,20 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from ..model import Event
+from ..checks import sample
+from ..model import Event, Finding
 from ..readers import InputError
 from ..timeparse import TimeParseError, parse_ts
 from . import AdapterResult, _n, find_column, read_rows
 
 TERMINAL = frozenset({"succeeded", "canceled", "failed", "refunded", "partially_refunded", "disputed"})
 SUCCESS = frozenset({"succeeded"})
+
+# The plugin's Adaptive Pricing flow creates the payment through a Checkout Session with only
+# checkout_type/site_url/payment_type in its metadata; order_id is written on it only after the
+# plugin has matched the payment to its order. A successful one without order_id was never matched.
+ADAPTIVE_PRICING = "adaptive_pricing_checkout"
+CHECK_UNLINKED = "provider success without an order reference"
 
 _ALIASES = {
     "paid": "succeeded",
@@ -82,6 +89,7 @@ class _Row:
     site: str
     at: datetime
     status: str
+    checkout_type: str = ""
 
 
 def _amount(value: str) -> float | None:
@@ -101,7 +109,8 @@ def _read_csv(path: Path, order_key: str) -> list[_Row]:
     if missing:
         raise InputError(f"{path}: does not look like a Stripe payments export — no {', '.join(missing)} column; found {', '.join(fields)}")
     col_order = find_column(fields, _meta_candidates(order_key))
-    if col_order is None:
+    col_ctype = find_column(fields, _meta_candidates("checkout_type"))
+    if col_order is None and col_ctype is None:
         raise InputError(
             f"{path}: no metadata:{order_key} column, so payments cannot be matched to orders. Export again with the "
             f"metadata columns included (the WooCommerce Stripe plugin writes {order_key} on every payment), or pass "
@@ -128,7 +137,12 @@ def _read_csv(path: Path, order_key: str) -> list[_Row]:
             raise InputError(f"{path}, row {i}, column {col_created}: {exc}") from exc
         out.append(
             _Row(
-                ref=row.get(col_id, ""), order=row.get(col_order, ""), site=row.get(col_site, "") if col_site else "", at=at, status=status
+                ref=row.get(col_id, ""),
+                order=row.get(col_order, "") if col_order else "",
+                site=row.get(col_site, "") if col_site else "",
+                at=at,
+                status=status,
+                checkout_type=row.get(col_ctype, "") if col_ctype else "",
             )
         )
     return out
@@ -202,7 +216,12 @@ def _read_json(path: Path, order_key: str) -> list[_Row]:
             raise InputError(f"{path}: object {ref}: {exc}") from exc
         out.append(
             _Row(
-                ref=ref, order=str(meta.get(order_key, "") or ""), site=str(meta.get("site_url", "") or ""), at=at, status=_json_status(obj)
+                ref=ref,
+                order=str(meta.get(order_key, "") or ""),
+                site=str(meta.get("site_url", "") or ""),
+                at=at,
+                status=_json_status(obj),
+                checkout_type=str(meta.get("checkout_type", "") or ""),
             )
         )
     return out
@@ -217,11 +236,59 @@ def _looks_like_json(path: Path) -> bool:
     return head[:1] in ("{", "[")
 
 
+def _unlinked_finding(rows: list[_Row], order_key: str, top_n: int) -> Finding:
+    """Successful payments that carry no order reference at all: the join cannot see them, so say so here."""
+    won = [r for r in rows if not r.order and r.status in SUCCESS]
+    adaptive = [r for r in won if r.checkout_type == ADAPTIVE_PRICING]
+    other = [r for r in won if r.checkout_type != ADAPTIVE_PRICING]
+
+    def listed(items: list[_Row]) -> str:
+        return sample((f"{r.ref} ({r.at:%Y-%m-%d %H:%M} UTC)" for r in sorted(items, key=lambda r: r.at)), top_n)
+
+    if adaptive:
+        summary = (
+            f"{len(adaptive)} successful Adaptive Pricing payments were never linked to an order"
+            if len(adaptive) != 1
+            else "1 successful Adaptive Pricing payment was never linked to an order"
+        ) + f" (no {order_key} in the metadata)"
+        if other:
+            summary += f"; {_n(len(other), 'other successful payment')} without {order_key}"
+        details = ["adaptive pricing: " + listed(adaptive)]
+        if other:
+            details.append("other: " + listed(other))
+        return Finding(
+            5,
+            CHECK_UNLINKED,
+            "suspect",
+            summary,
+            details,
+            next_step=(
+                f"The plugin writes {order_key} on an Adaptive Pricing payment only after it has matched the payment to its order "
+                "(a payment from the last few minutes may still be waiting for it), so these are the ones it never matched: "
+                "the customer paid, and the order most likely sits in Pending payment or "
+                "was cancelled as unpaid. Open each payment in Stripe, find the order by customer and time, then complete or refund it. "
+                "The order lookup for Adaptive Pricing was reworked in woocommerce-gateway-stripe#5757: check that your plugin "
+                "version includes it."
+            ),
+        )
+    if other:
+        return Finding(
+            5,
+            CHECK_UNLINKED,
+            "info",
+            f"{_n(len(other), 'successful payment')} without {order_key} — usually other integrations (invoices, payment links)",
+            ["examples: " + listed(other)],
+            next_step="If any of them was a store order, the plugin never linked it: find the order by customer and time.",
+        )
+    return Finding(5, CHECK_UNLINKED, "ok", f"every successful payment carries {order_key}")
+
+
 def read_payments(
     path: Path,
     terminal: set[str] | frozenset[str] = TERMINAL,
     order_key: str = "order_id",
     site_url: str | None = None,
+    top_n: int = 10,
 ) -> AdapterResult[Event]:
     """Read a Stripe payments export (Dashboard CSV or API JSON) into provider events keyed by order."""
     as_json = _looks_like_json(path)
@@ -229,22 +296,25 @@ def read_payments(
     if not rows:
         raise InputError(f"{path}: no payments in the file")
 
-    with_order = [r for r in rows if r.order]
-    if not with_order:
-        raise InputError(
-            f"{path}: none of the {len(rows)} payments carries '{order_key}' metadata, so none can be matched to an order "
-            "(wrong key? pass --stripe-order-key)"
-        )
-    kept = with_order
     notes: list[str] = []
     other_sites = 0
     if site_url:
         needle = site_url.lower()
-        kept = [r for r in with_order if needle in r.site.lower()]
-        other_sites = len(with_order) - len(kept)
-        if not kept:
+        kept_rows = [r for r in rows if needle in r.site.lower()]
+        other_sites = len(rows) - len(kept_rows)
+        if not kept_rows:
             raise InputError(f"{path}: no payment has a site_url containing {site_url!r}")
     else:
+        kept_rows = rows
+    with_order = [r for r in kept_rows if r.order]
+    unlinked = _unlinked_finding(kept_rows, order_key, top_n)
+    if not with_order and unlinked.verdict != "suspect":
+        raise InputError(
+            f"{path}: none of the {len(kept_rows)} payments carries '{order_key}' metadata, so none can be matched to an order "
+            "(wrong key? pass --stripe-order-key)"
+        )
+    kept = with_order
+    if not site_url:
         sites = sorted({r.site for r in with_order if r.site})
         if len(sites) > 1:
             shown = ", ".join(sites[:3]) + (", …" if len(sites) > 3 else "")
@@ -254,11 +324,11 @@ def read_payments(
 
     head = (
         f"stripe: {_n(len(rows), 'payment')} read ({'API JSON' if as_json else 'Dashboard CSV'}); "
-        f"{len(rows) - len(with_order)} without {order_key} metadata cannot be matched to an order"
+        f"{len(kept_rows) - len(with_order)} without {order_key} metadata cannot be matched to an order"
     )
     if site_url:
         head += f"; {other_sites} from other sites left out (--site-url {site_url})"
     notes.insert(0, head)
 
     events = [Event(payment_id=r.order, at=r.at, status=r.status, terminal=r.status in terminal, ref=r.ref) for r in kept]
-    return AdapterResult(events, notes)
+    return AdapterResult(events, notes, [unlinked])

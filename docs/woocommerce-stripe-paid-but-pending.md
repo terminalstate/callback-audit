@@ -12,9 +12,10 @@ into the payment's metadata.
 What you get, on the [example files](../examples/woocommerce-stripe/):
 
 ```
-| 5 | provider success, local terminal failure | SUSPECT | 1 payment succeeded at the provider but is closed as a failure locally (oldest success 4d 3h ago) |
-| 5 | provider terminal, local non-terminal    | SUSPECT | 2 payments are terminal at the provider but non-terminal locally (oldest terminal event 4d 21h ago); 2 of them succeeded at the provider |
-| 7 | age of non-terminal payments             | SUSPECT | oldest non-terminal payment is 4d 21h old (id 1003, status pending); 3 older than 24h |
+| 5 | provider success without an order reference | SUSPECT | 1 successful Adaptive Pricing payment was never linked to an order (no order_id in the metadata); 1 other successful payment without order_id |
+| 5 | provider success, local terminal failure    | SUSPECT | 1 payment succeeded at the provider but is closed as a failure locally (oldest success 4d 3h ago) |
+| 5 | provider terminal, local non-terminal       | SUSPECT | 2 payments are terminal at the provider but non-terminal locally (oldest terminal event 4d 21h ago); 2 of them succeeded at the provider |
+| 7 | age of non-terminal payments                | SUSPECT | oldest non-terminal payment is 4d 21h old (id 1003, status pending); 4 older than 24h |
 ```
 
 ## 1. Export the payments from Stripe
@@ -23,8 +24,9 @@ In the Stripe Dashboard, open **Transactions**, set the date range, and click **
 and under **Columns** include **Metadata**.
 
 The metadata matters. The plugin writes `order_id` (the order number) and `site_url` on every
-payment, and `order_id` is the only link between a Stripe payment and a WooCommerce order. Column
-names such as `metadata:order_id` and `order_id (metadata)` are both recognised.
+payment, and `order_id` is the only link between a Stripe payment and a WooCommerce order. With
+Adaptive Pricing, `checkout_type` tells the plugin's payments apart from the rest. Column names such
+as `metadata:order_id` and `order_id (metadata)` are both recognised.
 
 The check uses the payment id, created date, status, amount, amount refunded and captured columns.
 Customer names, emails and card details are not needed, so you can leave them out of the export.
@@ -100,8 +102,13 @@ callback-audit --stripe examples/woocommerce-stripe/stripe_payments.csv \
 
 ## 4. Read the report
 
-Three lines answer the question:
+Four lines answer the question:
 
+- **Station 5, "provider success without an order reference"** — successful payments that carry no
+  `order_id` at all, so they cannot be matched to any order. Adaptive Pricing payments get their
+  `order_id` only once the plugin has matched them to their order; the ones listed here were never
+  matched, and their orders are usually still pending or already cancelled. Find each order by the
+  customer and the time of the payment.
 - **Station 5, "provider success, local terminal failure"** — paid in Stripe, *cancelled or
   failed* in WooCommerce. The customer was charged, and may have been told the order was cancelled.
   Look at these first.
@@ -111,9 +118,10 @@ Three lines answer the question:
 - **Station 7, "age of non-terminal payments"** — how long orders sit in pending or on hold. This
   includes abandoned checkouts, so read it together with the two lines above.
 
-The notes at the top say what could not be matched: payments without `order_id` (other
-integrations, invoices), orders that appear only in the Stripe export (usually a shorter date
-range in the orders export), and payments from other stores.
+The notes at the top say what could not be matched: payments without `order_id` (Adaptive Pricing
+payments the plugin never matched, but also other integrations and invoices), orders that appear
+only in the Stripe export (usually a shorter date range in the orders export), and payments from
+other stores.
 
 Refunded payments are not reported as lost. Neither are uncaptured authorisations next to an
 on-hold order, or a failed attempt followed by a successful one.
@@ -138,8 +146,10 @@ Then fix the cause, or next week's orders will join the list.
   webhooks with HTTP 204, so Stripe marks them delivered and never retries. Signature failures in
   the log plus 204s in Stripe's delivery log point here. Full analysis:
   [case-woocommerce-stripe-204.md](case-woocommerce-stripe-204.md).
-- **The webhook arrived, but no order was found for it.** For example, the Adaptive Pricing order
-  lookup gave up after one attempt; it was fixed in
+- **The webhook arrived, but no order was found for it.** This is the Adaptive Pricing case: the
+  payment is created before it carries an order reference, and the plugin has to find the order by
+  its Checkout Session. When that lookup failed, it gave up after one attempt, and the order was
+  never updated. The lookup was reworked in
   [#5757](https://github.com/woocommerce/woocommerce-gateway-stripe/pull/5757).
 - **Unpaid orders are auto-cancelled.** When stock is held for unpaid orders, WooCommerce cancels
   pending orders after the hold time. A late or missing webhook then becomes a cancelled order.

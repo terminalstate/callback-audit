@@ -31,7 +31,11 @@ def test_stripe_dashboard_csv_statuses_and_notes():
     assert ev["1013"][0].status == "partially_refunded"  # "Paid" with 40.00 of 140.00 refunded
     assert ev["1014"][0].status == "requires_capture"  # "Uncaptured"
     assert sorted(e.status for e in ev["1012"]) == ["failed", "succeeded"]
-    assert res.notes[0].startswith("stripe: 15 payments read (Dashboard CSV); 1 without order_id metadata")
+    assert res.notes[0].startswith("stripe: 16 payments read (Dashboard CSV); 2 without order_id metadata")
+    (unlinked,) = res.findings
+    assert unlinked.check == stripe.CHECK_UNLINKED and unlinked.verdict == "suspect"
+    assert unlinked.summary.startswith("1 successful Adaptive Pricing payment was never linked to an order")
+    assert unlinked.details == ["adaptive pricing: ch_ex_ap1 (2026-09-24 11:03 UTC)", "other: ch_ex_inv1 (2026-09-21 00:05 UTC)"]
 
 
 def test_stripe_csv_paid_but_not_captured_is_an_authorisation(tmp_path):
@@ -66,6 +70,46 @@ def test_stripe_csv_where_no_payment_has_order_metadata(tmp_path):
     p.write_text("id,Created date (UTC),Status,order_id (metadata)\nch_1,2026-09-20 10:00:00,Paid,\n")
     with pytest.raises(InputError, match="--stripe-order-key"):
         stripe.read_payments(p)
+
+
+def test_stripe_adaptive_pricing_payments_without_any_order_column(tmp_path):
+    p = tmp_path / "s.csv"
+    p.write_text(
+        "id,Created date (UTC),Status,checkout_type (metadata)\n"
+        "ch_1,2026-09-20 10:00:00,Paid,adaptive_pricing_checkout\n"
+        "ch_2,2026-09-20 10:05:00,Failed,adaptive_pricing_checkout\n"
+    )
+    res = stripe.read_payments(p)
+    assert res.records == []
+    assert res.findings[0].verdict == "suspect" and "ch_1" in res.findings[0].details[0] and "ch_2" not in res.findings[0].details[0]
+
+
+def test_stripe_payments_without_order_but_not_adaptive_pricing_are_info(tmp_path):
+    p = tmp_path / "s.csv"
+    p.write_text("id,Created date (UTC),Status,order_id (metadata)\nch_1,2026-09-20 10:00:00,Paid,7\nin_1,2026-09-20 11:00:00,Paid,\n")
+    (f,) = stripe.read_payments(p).findings
+    assert f.verdict == "info" and "in_1" in f.details[0]
+
+
+def test_stripe_every_success_linked_is_ok(tmp_path):
+    p = tmp_path / "s.csv"
+    p.write_text("id,Created date (UTC),Status,order_id (metadata)\nch_1,2026-09-20 10:00:00,Paid,7\nch_2,2026-09-20 11:00:00,Failed,\n")
+    assert stripe.read_payments(p).findings[0].verdict == "ok"
+
+
+def test_stripe_json_adaptive_pricing_without_order(tmp_path):
+    p = tmp_path / "s.json"
+    lost = {
+        "id": "pi_9",
+        "object": "payment_intent",
+        "status": "succeeded",
+        "created": 1758362400,
+        "metadata": {"checkout_type": "adaptive_pricing_checkout", "site_url": "https://shop.example"},
+    }
+    p.write_text(json.dumps({"object": "list", "data": [pi("pi_1", "succeeded", "1"), lost]}))
+    res = stripe.read_payments(p, site_url="shop.example")
+    assert res.records == []  # pi_1 carries no site_url, so --site-url leaves it out
+    assert res.findings[0].verdict == "suspect" and "pi_9" in res.findings[0].details[0]
 
 
 def test_stripe_custom_order_key(tmp_path):
@@ -177,7 +221,7 @@ def test_stripe_json_broken_line_is_a_clean_error(tmp_path):
 def test_woo_hpos_export():
     res = woocommerce.read_orders(EXAMPLES / "orders.csv")
     orders = {p.id: p for p in res.records}
-    assert len(orders) == 12  # one PayPal order and one refund row left out
+    assert len(orders) == 13  # one PayPal order and one refund row left out
     assert "1009" not in orders and "1011" not in orders
     assert orders["1003"].status == "pending" and not orders["1003"].terminal
     assert orders["1004"].status == "cancelled" and orders["1004"].terminal

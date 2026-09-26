@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Generic, TypeVar
 
-from ..model import Event, Payment
+from ..model import Event, Finding, Payment
 from ..readers import InputError
 
 T = TypeVar("T")
@@ -23,6 +23,7 @@ T = TypeVar("T")
 class AdapterResult(Generic[T]):
     records: list[T]
     notes: list[str] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)  # what only the adapter can see, e.g. payments with no order reference
 
 
 def read_rows(path: Path) -> tuple[list[dict[str, str]], list[str]]:

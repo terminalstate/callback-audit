@@ -145,6 +145,7 @@ def main(argv: list[str] | None = None) -> int:
     ctx = Context(options=options, log_patterns=patterns)
     inputs: dict[str, str] = {}
     notes: list[str] = []
+    adapter_findings = []
     try:
         if args.payments:
             ctx.payments = read_payments(args.payments, terminal)
@@ -156,10 +157,15 @@ def main(argv: list[str] | None = None) -> int:
             inputs["woo_orders"] = str(args.woo_orders)
         if args.stripe:
             stripe = stripe_adapter.read_payments(
-                args.stripe, provider_terminal or stripe_adapter.TERMINAL, order_key=args.stripe_order_key, site_url=args.site_url
+                args.stripe,
+                provider_terminal or stripe_adapter.TERMINAL,
+                order_key=args.stripe_order_key,
+                site_url=args.site_url,
+                top_n=args.top,
             )
             ctx.events = stripe.records
             notes.extend(stripe.notes)
+            adapter_findings.extend(stripe.findings)
             inputs["stripe"] = str(args.stripe)
         if args.deliveries:
             ctx.deliveries = read_deliveries(args.deliveries)
@@ -189,7 +195,7 @@ def main(argv: list[str] | None = None) -> int:
             inputs["success_statuses"] += " (provider: " + ",".join(sorted(provider_success)) + ")"
     ctx.inputs = inputs
 
-    findings = run_all(ctx)
+    findings = sorted(run_all(ctx) + adapter_findings, key=lambda f: (f.station, f.check))
     render = to_json if args.json else to_markdown
     out = render(findings, now=now, inputs=inputs, notes=notes)
     sys.stdout.write(out)

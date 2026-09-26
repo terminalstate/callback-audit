@@ -78,6 +78,7 @@ def test_woocommerce_stripe_example(capsys):
     assert "2 of them succeeded at the provider" in out
     assert "examples: 1004" in out and "examples: 1003, 1005" in out
     assert "4 signature failures" in out
+    assert "1 successful Adaptive Pricing payment was never linked to an order" in out
     assert "Notes on the inputs:" in out and "joined: 12 orders in both exports" in out
     assert "Success statuses: completed,processing,refunded (provider: succeeded)" in out
 
@@ -85,7 +86,9 @@ def test_woocommerce_stripe_example(capsys):
 def test_woocommerce_stripe_example_json(capsys):
     assert main([*EXAMPLE_ARGS, "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
-    assert any(n.startswith("stripe: 15 payments read") for n in payload["notes"])
+    assert any(n.startswith("stripe: 16 payments read") for n in payload["notes"])
+    unlinked = next(f for f in payload["findings"] if f["check"] == "provider success without an order reference")
+    assert unlinked["verdict"] == "suspect" and "ch_ex_ap1" in unlinked["details"][0]
     outcome = next(f for f in payload["findings"] if f["check"] == "provider success, local terminal failure")
     assert outcome["verdict"] == "suspect"
 
