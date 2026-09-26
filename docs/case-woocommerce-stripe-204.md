@@ -7,7 +7,7 @@ data, no live Stripe account, no database.*
 
 ## TL;DR
 
-In **woocommerce-gateway-stripe 11.0.0** (the official WooCommerce Stripe gateway, 900k+ installs),
+In **woocommerce-gateway-stripe 11.0.0** (the official WooCommerce Stripe gateway, 700k+ active installs on WordPress.org),
 a webhook that **fails signature validation** — a rotated signing secret, a clock more than five
 minutes off, an empty secret — is answered with **HTTP 204**. Stripe treats any 2xx as *delivered*
 and never retries. So the callback that would have moved the order to a terminal state is dropped,
@@ -73,7 +73,7 @@ Stripe's `succeeded` payment. You have to join them to see it.
 ## Reproduction — against the plugin's real handler
 
 No database and no live Stripe account are needed to reproduce the mechanism, because the mechanism
-lives entirely in the request/response path. The harness (`repro/`) runs the **real** v11.0.0
+lives entirely in the request/response path. A small harness runs the **real** v11.0.0
 `check_for_webhook()` under PHP's built-in server with WordPress stubbed to memory, and drives real
 HTTP POSTs at it:
 
