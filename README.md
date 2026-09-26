@@ -29,9 +29,12 @@ Two exports and no plugin. The report lists the orders that Stripe calls paid wh
 still shows them as pending or on hold, or has already cancelled them. How to get the two files,
 and what to do with the list: [docs/woocommerce-stripe-paid-but-pending.md](docs/woocommerce-stripe-paid-but-pending.md).
 
-## A worked case
+## Worked cases
 
-[A real "orders stuck in pending" bug in woocommerce-gateway-stripe](docs/case-woocommerce-stripe-204.md) (v11.0.0): a webhook that fails signature validation is answered **HTTP 204**, so Stripe marks it delivered and never retries and the order sits in `pending` while Stripe shows it succeeded. Reproduced against the plugin's own handler, then found by this tool at stations 5 and 7 — while every HTTP response stayed 2xx.
+Real bugs in widely-installed payment plugins, reproduced against the plugins' own code:
+
+- [woocommerce-gateway-stripe](docs/case-woocommerce-stripe-204.md) (v11.0.0): a webhook that fails signature validation is answered **HTTP 204**, so Stripe marks it delivered and never retries, and the order sits in `pending` while Stripe shows it succeeded. Found by this tool at stations 5 and 7, while every HTTP response stayed 2xx.
+- [Mollie Payments for WooCommerce](docs/case-mollie-woocommerce-200.md) (v8.1.10): when the plugin can't fetch a payment's status from the Mollie API (timeout, 5xx, 429), the default webhook URL still answers **200**, so Mollie stops retrying and the paid order stays pending.
 
 ## The seven stations
 
