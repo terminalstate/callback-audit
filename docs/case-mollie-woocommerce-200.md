@@ -14,9 +14,9 @@ from the API, a DNS or TLS problem on the store's server. Mollie retries a webho
 but only until it gets a 200, so this delivery is never retried. The customer has paid, and the
 order stays in *Pending payment*.
 
-The same plugin answers **400** in the same situation on its older WC-API webhook URL, and **500**
-in another branch of the same REST callback. So the 200 here looks like an oversight rather than a
-design choice.
+The same plugin answers **400** in the same situation on its older WC-API webhook URL. Another
+branch of the same REST callback answers **500** when its API call fails. So the 200 here looks like
+an oversight rather than a design choice.
 
 ## What Mollie expects
 
