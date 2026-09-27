@@ -14,15 +14,17 @@ sends for deliveries it rejects.*
 ## TL;DR
 
 **Razorpay for WooCommerce 4.8.8** (100,000+ active installs on WordPress.org) answers a
-`payment.authorized` webhook with **200** as soon as it has stored it. A cron job applies it five or
-more minutes later. Two things can go wrong after the 200, and Razorpay hears about neither:
+`payment.authorized` webhook with **200** on arrival and leaves the event in a table. A cron job
+applies it five or more minutes later. At least two things can go wrong after the 200, and Razorpay
+hears about neither:
 
 1. **The plugin can't fetch the payment from the Razorpay API** (a timeout, a 5xx, a 429). The cron
-   marks the event as done anyway. The order stays in *Pending payment*, and nothing tries again:
-   not the cron, and not Razorpay, which got its 200 when the webhook arrived.
+   marks the event as done anyway. The order stays unpaid (*Pending payment*, or *Cancelled* once
+   WooCommerce's hold-stock timer runs out), and nothing tries again: not the cron, and not
+   Razorpay, which got its 200 when the webhook arrived.
 2. **The store's Payment Action is "Authorize".** The cron marks the order **Failed**, although the
-   payment is authorized. When the browser callback brings in the same payment, the order becomes
-   *Processing*.
+   payment is authorized. When the browser callback brings in the same payment, the order is marked
+   paid.
 
 The webhook only matters when the browser callback didn't mark the order paid: the customer closed
 the tab after paying, paid in a UPI app and never came back to the browser, or the checkout page
@@ -62,8 +64,10 @@ on `master` (plugin version 4.8.8).
 - **The webhook.** Razorpay posts `payment.authorized` to `wp-admin/admin-post.php?action=rzp_wc_webhook`
   ([`#L45`](https://github.com/razorpay/razorpay-woocommerce/blob/d8138d762de986b533eb67b8298b2478524d0f39/woo-razorpay.php#L45),
   [`#L493`](https://github.com/razorpay/razorpay-woocommerce/blob/d8138d762de986b533eb67b8298b2478524d0f39/woo-razorpay.php#L493)).
-  The plugin checks the signature and writes the event into that row
-  ([`razorpay-webhook.php#L152-L161`](https://github.com/razorpay/razorpay-woocommerce/blob/d8138d762de986b533eb67b8298b2478524d0f39/includes/razorpay-webhook.php#L152-L161)).
+  The plugin checks the signature
+  ([`razorpay-webhook.php#L126-L148`](https://github.com/razorpay/razorpay-woocommerce/blob/d8138d762de986b533eb67b8298b2478524d0f39/includes/razorpay-webhook.php#L126-L148))
+  and writes the event into that row
+  ([`#L152-L161`](https://github.com/razorpay/razorpay-woocommerce/blob/d8138d762de986b533eb67b8298b2478524d0f39/includes/razorpay-webhook.php#L152-L161)).
   Nothing sets a status, so WordPress's `admin-post.php` ends the request with 200.
 - **The cron.** Every 5 minutes
   ([`woo-razorpay.php#L3339-L3341`](https://github.com/razorpay/razorpay-woocommerce/blob/d8138d762de986b533eb67b8298b2478524d0f39/woo-razorpay.php#L3339-L3341)),
@@ -110,6 +114,12 @@ The cron does keep a row for the next run when `paymentAuthorized()` throws: the
 A failed API call never throws, so it never gets there. This is item 2 of
 [#664](https://github.com/razorpay/razorpay-woocommerce/issues/664), and it is unchanged in 4.8.8.
 
+What happens to the order then is up to WooCommerce. With stock management on, it cancels unpaid
+checkout orders when the hold-stock time runs out (60 minutes by default), and the plugin doesn't ask
+Razorpay first. A pull request that would exempt Razorpay orders from that,
+[#645](https://github.com/razorpay/razorpay-woocommerce/pull/645), has been open since March 2026.
+Without stock management, the order stays in *Pending payment* until someone notices.
+
 ## 2. With Payment Action "Authorize", an authorized payment becomes a Failed order
 
 The plugin's *Payment Action* setting has two values: "Authorize and Capture", the default, and
@@ -127,7 +137,7 @@ Failed: The payment has failed."
 
 So with "Authorize", the order's status depends on which path brought the payment in:
 
-- the browser callback: *Processing*;
+- the browser callback: paid (*Processing*);
 - only the webhook: *Failed*.
 
 Unless the merchant follows the note, finds the payment in the Dashboard and captures it by hand,
@@ -161,11 +171,12 @@ the list of rows that `get_results()` returned
 PHP 8 warns `Undefined array key "rzp_webhook_data"` on every `payment.authorized`, and each save
 overwrites the events stored for that order before it.
 
-For signatures, the plugin limits the damage on its own. When it creates a Razorpay order and its
-last push is more than 12 hours old, `autoEnableWebhook()` pushes the plugin's secret to the webhook
-in the merchant's Razorpay account
+For signatures, the plugin limits the damage on its own. Whenever the settings are saved, and when it
+creates a Razorpay order more than 12 hours after its last attempt, `autoEnableWebhook()` pushes the
+plugin's secret to the webhook in the merchant's Razorpay account
 ([`woo-razorpay.php#L1438-L1452`](https://github.com/razorpay/razorpay-woocommerce/blob/d8138d762de986b533eb67b8298b2478524d0f39/woo-razorpay.php#L1438-L1452)),
-so a mismatch fixes itself at the next push. Deliveries rejected in the meantime are not coming back.
+so a mismatch fixes itself at the next successful push. Deliveries rejected in the meantime are not
+coming back.
 
 ## Reproduction, against the plugin's own code
 
@@ -182,10 +193,10 @@ The harness is in this repository:
 - **Fake:** the Razorpay API, a second local server. The SDK is pointed at it through its own
   `Api::$baseUrl`, and it answers the payment fetch the way the scenario asks.
 
-Each scenario is one signed `payment.authorized` POST to `admin-post.php?action=rzp_wc_webhook`,
-then the cron, then the cron once more with the API answering normally. Instead of waiting five
-minutes, the harness moves the event's timestamp back 301 seconds; a run with the real five-minute
-wait gave the same result.
+Each scenario is one `payment.authorized` POST to `admin-post.php?action=rzp_wc_webhook` (signed,
+except in the two signature scenarios), then the cron, then the cron once more with the API answering
+normally. Instead of waiting five minutes, the harness moves the event's timestamp back 301 seconds;
+a run of the 503 scenario with the real five-minute wait gave the same result.
 
 | Scenario | Webhook answered | Queue row after the cron | Order after the cron | Cron again, API healthy |
 |---|---|---|---|---|
@@ -209,8 +220,9 @@ ERROR {"message":"cURL error 28: Operation timed out after 60002 milliseconds wi
 INFO  Webhook cron execution completed.
 ```
 
-With a 429 the message is `Too many requests`. That is the error a store's log shows in
-[#571](https://github.com/razorpay/razorpay-woocommerce/issues/571), on a different API call.
+The fake 429 carries the error text from a store's log in
+[#571](https://github.com/razorpay/razorpay-woocommerce/issues/571) (`Too many requests`, raised there
+by a different API call), and the plugin logs it the same way: one ERROR line.
 
 ## What would fix it
 
@@ -221,8 +233,9 @@ With a 429 the message is `Too many requests`. That is the error a store's log s
 - **With "Authorize", count an authorized payment as a success**, as the browser callback already
   does. If the plugin wants to show that the money isn't captured yet, *On hold* would say so.
 - **Answer non-2xx when a delivery is rejected or couldn't be stored.** Razorpay then retries it,
-  and if failures continue for 24 hours it disables the webhook and emails the merchant, which is a
-  signal where today there is none. `autoEnableWebhook()` already sets the webhook back to active.
+  and if failures continue for 24 hours it disables the webhook and emails the merchant. That is a
+  signal the merchant sees; today there is at most a line in the plugin's log. `autoEnableWebhook()`
+  already sets a disabled webhook back to active at its next push.
 
 ## Finding the orders with callback-audit
 
