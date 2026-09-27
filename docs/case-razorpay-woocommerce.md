@@ -9,7 +9,8 @@ own code. Everything here is public: no store data and no Razorpay account.*
 [razorpay-woocommerce#664](https://github.com/razorpay/razorpay-woocommerce/issues/664) (August 2026,
 plugin 4.8.7). This write-up reproduces it on 4.8.8 with a separate harness and adds what that issue
 doesn't cover: what happens when the store's Payment Action is "Authorize", and the 200 the endpoint
-sends for deliveries it rejects.*
+sends for deliveries it rejects. The "Authorize" problem is filed as
+[razorpay-woocommerce#670](https://github.com/razorpay/razorpay-woocommerce/issues/670).*
 
 ## TL;DR
 
