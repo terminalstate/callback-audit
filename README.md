@@ -53,6 +53,9 @@ Real bugs in widely-used payment integrations, reproduced against their own code
 The cheapest and most telling check is the last one: *how old is your oldest non-terminal
 payment right now?* If the answer is "days", station 7 applies regardless of the other six.
 
+Each station with its manual checks and the incidents behind it, as a longer read:
+[Seven places a webhook dies between the provider and your database](docs/lost-callbacks.md).
+
 ## Inputs
 
 Every input is optional. Each one unlocks a subset of the checks; the report marks the rest
