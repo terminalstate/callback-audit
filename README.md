@@ -148,6 +148,11 @@ python -m callback_audit.demo /tmp/demo   # write the synthetic demo dataset som
 fictional providers, fourteen days of traffic, and one planted problem per station so that
 every check fires. The module docstring lists what was planted; `--demo-dir` keeps the files.
 
+## Contact
+
+Questions about the tool: issues here. An audit of your own logs and database, read-only:
+hello@terminalstate.dev, or see [terminalstate.dev](https://terminalstate.dev).
+
 ## License
 
 MIT.
