@@ -8,6 +8,7 @@ Other HTTP traffic (the test's own request to the Odoo server) goes through unto
 
 import json
 import logging
+from http import HTTPStatus
 from unittest.mock import patch
 
 import requests
@@ -25,6 +26,7 @@ REAL_REQUEST = requests.request
 def _mollie_response(status, body):
     response = requests.Response()
     response.status_code = status
+    response.reason = HTTPStatus(status).phrase
     response._content = json.dumps(body).encode()
     response.headers["Content-Type"] = "application/hal+json"
     response.url = f"https://api.mollie.com/v2/payments/{PAYMENT_ID}"
