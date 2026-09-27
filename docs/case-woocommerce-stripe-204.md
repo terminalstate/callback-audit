@@ -75,7 +75,7 @@ Stripe's `succeeded` payment. You have to join them to see it.
 No database and no live Stripe account are needed to reproduce the mechanism, because the mechanism
 lives entirely in the request/response path. A small harness runs the **real** v11.0.0
 `check_for_webhook()` under PHP's built-in server with WordPress stubbed to memory, and drives real
-HTTP POSTs at it:
+HTTP POSTs at it ([`repro/woocommerce-stripe/`](../repro/woocommerce-stripe/)):
 
 ```
 GOOD signature  -> HTTP 200  (validation passes, order processing runs)
@@ -176,5 +176,5 @@ the exact footprint of a dropped callback. The oldest-pending age (station 7) ne
   handler**, not written by hand.
 - The 400-on-duplicate-webhooks branch is represented faithfully: the harness forces the common
   single-webhook configuration, which is the one that returns 204.
-- Reproduce end to end: run the real handler under `php -S` with WordPress stubbed to memory, then drive
-  webhook POSTs at it as described above. The full harness (stubs, router, generator) is short and self-contained.
+- Reproduce end to end: the harness (stubs, router, generator) is in this repository,
+  [`repro/woocommerce-stripe/`](../repro/woocommerce-stripe/).
