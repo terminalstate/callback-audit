@@ -31,11 +31,12 @@ and what to do with the list: [docs/woocommerce-stripe-paid-but-pending.md](docs
 
 ## Worked cases
 
-Real bugs in widely-installed payment plugins, reproduced against the plugins' own code:
+Real bugs in widely-used payment integrations, reproduced against their own code:
 
 - [woocommerce-gateway-stripe](docs/case-woocommerce-stripe-204.md) (v11.0.0): a webhook that fails signature validation is answered **HTTP 204**, so Stripe marks it delivered and never retries, and the order sits in `pending` while Stripe shows it succeeded. Found by this tool at stations 5 and 7, while every HTTP response stayed 2xx.
 - [Mollie Payments for WooCommerce](docs/case-mollie-woocommerce-200.md) (v8.1.10): when the plugin can't fetch a payment's status from the Mollie API (timeout, 5xx, 429), the default webhook URL still answers **200**, so Mollie stops retrying and the paid order stays pending. The harness is in [repro/mollie-woocommerce](repro/mollie-woocommerce/).
 - [Razorpay for WooCommerce](docs/case-razorpay-woocommerce.md) (v4.8.8): a `payment.authorized` webhook is answered **200** and left for a cron job. The cron marks it done even when the payment couldn't be fetched from the Razorpay API, and with the Payment Action set to "Authorize" it marks the paid order **Failed**. The harness is in [repro/razorpay-woocommerce](repro/razorpay-woocommerce/).
+- [Odoo with Mollie](docs/case-odoo-mollie-200.md) (18.0, 19.0): when the status request to the Mollie API fails (connection error, 5xx, 429, and in 19.0 a timeout), the webhook still answers **200**, so Mollie stops retrying and the transaction stays in draft. Reproduced in a real Odoo with its own test framework; the harness is in [repro/odoo-mollie](repro/odoo-mollie/).
 
 ## The seven stations
 
