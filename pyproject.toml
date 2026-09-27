@@ -42,6 +42,7 @@ include = ["callback_audit*"]
 [tool.ruff]
 line-length = 140
 target-version = "py310"
+extend-exclude = ["*.md"]  # the docs quote third-party code verbatim
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
