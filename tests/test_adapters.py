@@ -236,6 +236,24 @@ def test_woo_all_gateways_keeps_other_methods():
     assert "1009" in orders and "1011" not in orders
 
 
+def test_woo_gateway_prefix_keeps_that_method_and_drops_the_stripe_hint(tmp_path):
+    p = tmp_path / "o.csv"
+    p.write_text(
+        "id,status,date_created_gmt,payment_method\n7,pending,2026-09-20 10:00:00,razorpay\n8,processing,2026-09-20 11:00:00,stripe\n"
+    )
+    res = woocommerce.read_orders(p, method_prefix="razorpay")
+    assert [o.id for o in res.records] == ["7"]
+    assert "Stripe" not in res.notes[0] and "same id" in res.notes[0]
+    assert any("kept: payment_method starting with 'razorpay'" in n for n in res.notes)
+
+
+def test_woo_no_order_of_that_gateway_says_which_flag(tmp_path):
+    p = tmp_path / "o.csv"
+    p.write_text("id,status,date_created_gmt,payment_method\n7,pending,2026-09-20 10:00:00,razorpay\n")
+    with pytest.raises(InputError, match="--gateway"):
+        woocommerce.read_orders(p)
+
+
 def test_woo_legacy_export_without_payment_method(tmp_path):
     p = tmp_path / "o.csv"
     p.write_text("ID,post_status,post_date_gmt\n7,wc-pending,2026-09-20 10:00:00\n8,wc-completed,2026-09-20 11:00:00\n")

@@ -93,6 +93,37 @@ def test_woocommerce_stripe_example_json(capsys):
     assert outcome["verdict"] == "suspect"
 
 
+def test_woocommerce_orders_with_generic_events_of_another_gateway(tmp_path, capsys):
+    # The shape of docs/case-razorpay-woocommerce.md: one order left pending after a captured
+    # payment, one marked failed after an authorized one, one fine.
+    orders = tmp_path / "orders.csv"
+    orders.write_text(
+        "id,status,date_created_gmt,payment_method,type\n"
+        "1234,wc-pending,2026-09-26 21:10:00,razorpay,shop_order\n"
+        "1235,wc-failed,2026-09-26 21:20:00,razorpay,shop_order\n"
+        "1236,wc-processing,2026-09-26 21:30:00,razorpay,shop_order\n"
+        "1237,wc-processing,2026-09-26 21:40:00,stripe,shop_order\n"
+    )
+    events = tmp_path / "razorpay.csv"
+    events.write_text(
+        "payment_id,at,status,ref\n"
+        "1234,2026-09-26T21:11:02Z,captured,pay_A\n"
+        "1235,2026-09-26T21:21:40Z,authorized,pay_B\n"
+        "1236,2026-09-26T21:31:15Z,captured,pay_C\n"
+    )
+    args = ["--woo-orders", str(orders), "--gateway", "razorpay", "--events", str(events)]
+    args += ["--provider-terminal", "captured,authorized,failed,refunded", "--provider-success", "captured,authorized"]
+    assert main([*args, "--now", "2026-09-27T08:00:00Z"]) == 0
+    out = capsys.readouterr().out
+    assert "1 payment succeeded at the provider but is closed as a failure locally" in out
+    assert "authorized -> local failed: 1" in out and "examples: 1235" in out
+    assert "1 payment is terminal at the provider but non-terminal locally" in out
+    assert "; it succeeded at the provider" in out
+    assert "captured -> local pending: 1" in out and "examples: 1234" in out
+    assert "woo-orders: 3 orders read" in out and "Stripe's order_id" not in out
+    assert "joined: 3 orders in both exports" in out
+
+
 def test_platform_exports_replace_the_generic_inputs(capsys):
     with pytest.raises(SystemExit):
         main(["--woo-orders", str(EXAMPLES / "orders.csv"), "--payments", str(EXAMPLES / "orders.csv")])

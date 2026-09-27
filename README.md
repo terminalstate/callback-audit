@@ -68,6 +68,7 @@ as `n/a` and says which input would answer them.
 | `--deliveries` | CSV | *if you are the sender*: `payment_id, attempt` + optional `sent_at, response_code, response_body` |
 | `--success` | list | local statuses that mean the money arrived, e.g. `succeeded`; enables the "provider success, local terminal failure" check (`--provider-success` if the provider names them differently) |
 | `--woo-orders` | CSV | WooCommerce orders, instead of `--payments`: `id` or `number`, `status`, `date_created_gmt` + optional `payment_method, type` ([how to export](docs/woocommerce-stripe-paid-but-pending.md)) |
+| `--gateway` | name | with `--woo-orders`: the payment method to keep, matched as the start of `payment_method` (default `stripe`; e.g. `razorpay`). `--all-gateways` keeps every method |
 | `--stripe` | CSV or JSON | Stripe payments, instead of `--events`: the Dashboard export with metadata columns, or API JSON; matched to orders by `order_id` metadata (`--stripe-order-key`, `--site-url`) |
 
 Timestamps: ISO 8601 (with or without offset), epoch seconds or milliseconds, or the

@@ -85,13 +85,16 @@ def run(ctx: Context) -> list[Finding]:
             by_status: dict[str, int] = defaultdict(int)
             for _, ev, local_status, _won in mismatched:
                 by_status[f"{ev.status} -> local {local_status}"] += 1
-            summary = f"{len(mismatched)} payments are terminal at the provider but non-terminal locally (oldest terminal event {humanize(ctx.options.now - oldest[1].at)} ago)"
+            count = f"{len(mismatched)} payment is" if len(mismatched) == 1 else f"{len(mismatched)} payments are"
+            summary = f"{count} terminal at the provider but non-terminal locally (oldest terminal event {humanize(ctx.options.now - oldest[1].at)} ago)"
             next_step = (
                 "This is the list to trace. For each id: did the request reach your edge (station 2)? was it rejected (3)? "
                 "accepted but misparsed (4)? or applied to a state machine that refused the transition (5)? "
                 "A non-success terminal status that your rules do not finalise is a common cause here."
             )
-            if won_statuses:
+            if won_statuses and len(mismatched) == 1:
+                summary += "; it succeeded at the provider" if n_won else ""
+            elif won_statuses:
                 summary += f"; {n_won} of them succeeded at the provider"
                 if n_won:
                     next_step = (

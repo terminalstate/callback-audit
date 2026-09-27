@@ -95,15 +95,21 @@ def read_orders(
 
     if not out:
         raise InputError(
-            f"{path}: no orders left to check ({other_methods} paid with other methods, {not_orders} rows that are not orders)"
+            f"{path}: no orders left to check ({other_methods} paid with other methods, {not_orders} rows that are not orders); "
+            f"--gateway names the payment method to keep (now: {method_prefix}), --all-gateways keeps every one"
         )
 
     head = f"woo-orders: {_n(len(out), 'order')} read, matched on the `{col_key}` column"
-    if col_number is None:
+    if col_number is None and method_prefix == "stripe":
         head += " (Stripe's order_id metadata holds the order number; if an order-numbering plugin is active, export the number)"
+    elif col_number is None:
+        head += " (the provider export must name each order by the same id)"
     notes = [head]
     if other_methods:
-        notes.append(f"woo-orders: {_n(other_methods, 'order')} paid with other methods left out (--all-gateways keeps them)")
+        notes.append(
+            f"woo-orders: {_n(other_methods, 'order')} paid with other methods left out "
+            f"(kept: payment_method starting with '{method_prefix}'; --gateway changes it, --all-gateways keeps every one)"
+        )
     if not col_method:
         notes.append("woo-orders: no payment_method column, so orders of every payment method are counted in the age check")
     if not_orders:

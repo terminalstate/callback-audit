@@ -85,7 +85,14 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument(
         "--stripe-order-key", default="order_id", help="with --stripe: metadata key holding the order number (default: order_id)"
     )
-    g.add_argument("--all-gateways", action="store_true", help="with --woo-orders: keep orders of every payment method, not only Stripe")
+    g.add_argument(
+        "--gateway",
+        default="stripe",
+        help="with --woo-orders: keep orders whose payment_method starts with this, e.g. razorpay (default: stripe)",
+    )
+    g.add_argument(
+        "--all-gateways", action="store_true", help="with --woo-orders: keep orders of every payment method, not only the --gateway one"
+    )
     return p
 
 
@@ -151,7 +158,12 @@ def main(argv: list[str] | None = None) -> int:
             ctx.payments = read_payments(args.payments, terminal)
             inputs["payments"] = str(args.payments)
         if args.woo_orders:
-            orders = woo_adapter.read_orders(args.woo_orders, terminal or woo_adapter.TERMINAL, all_gateways=args.all_gateways)
+            orders = woo_adapter.read_orders(
+                args.woo_orders,
+                terminal or woo_adapter.TERMINAL,
+                all_gateways=args.all_gateways,
+                method_prefix=args.gateway.strip().lower(),
+            )
             ctx.payments = orders.records
             notes.extend(orders.notes)
             inputs["woo_orders"] = str(args.woo_orders)
