@@ -4,7 +4,8 @@
 first in Python. It is the same bug as in the [Mollie for WooCommerce case](case-mollie-woocommerce-200.md),
 this time in Odoo, the open-source ERP with a web shop, whose Mollie integration is part of Odoo
 Community. It is reproduced in a real Odoo with Odoo's own test framework. Everything here is public:
-no store data and no Mollie account.*
+no store data and no Mollie account. Reported upstream as
+[odoo/odoo#290678](https://github.com/odoo/odoo/issues/290678).*
 
 ## TL;DR
 
