@@ -69,7 +69,8 @@ For comparison, the same failure is not acknowledged elsewhere in the plugin:
 
 ## Reproduction, against the plugin's own code
 
-A small harness runs both webhook entry points under PHP's built-in server:
+A small harness runs both webhook entry points under PHP's built-in server. It is in this repository,
+[`repro/mollie-woocommerce/`](../repro/mollie-woocommerce/), and `./run.sh` prints the table below:
 
 - **Real:** the plugin's code from `RestApi::callback()` and `MollieOrderService::onWebhookAction()`
   down through `PaymentFactory`, `MolliePayment`, the plugin's `Api` helper and `WordPressHttpAdapter`,

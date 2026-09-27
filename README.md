@@ -34,7 +34,7 @@ and what to do with the list: [docs/woocommerce-stripe-paid-but-pending.md](docs
 Real bugs in widely-installed payment plugins, reproduced against the plugins' own code:
 
 - [woocommerce-gateway-stripe](docs/case-woocommerce-stripe-204.md) (v11.0.0): a webhook that fails signature validation is answered **HTTP 204**, so Stripe marks it delivered and never retries, and the order sits in `pending` while Stripe shows it succeeded. Found by this tool at stations 5 and 7, while every HTTP response stayed 2xx.
-- [Mollie Payments for WooCommerce](docs/case-mollie-woocommerce-200.md) (v8.1.10): when the plugin can't fetch a payment's status from the Mollie API (timeout, 5xx, 429), the default webhook URL still answers **200**, so Mollie stops retrying and the paid order stays pending.
+- [Mollie Payments for WooCommerce](docs/case-mollie-woocommerce-200.md) (v8.1.10): when the plugin can't fetch a payment's status from the Mollie API (timeout, 5xx, 429), the default webhook URL still answers **200**, so Mollie stops retrying and the paid order stays pending. The harness is in [repro/mollie-woocommerce](repro/mollie-woocommerce/).
 - [Razorpay for WooCommerce](docs/case-razorpay-woocommerce.md) (v4.8.8): a `payment.authorized` webhook is answered **200** and left for a cron job. The cron marks it done even when the payment couldn't be fetched from the Razorpay API, and with the Payment Action set to "Authorize" it marks the paid order **Failed**. The harness is in [repro/razorpay-woocommerce](repro/razorpay-woocommerce/).
 
 ## The seven stations
