@@ -3,7 +3,9 @@
 *A second worked case for [callback-audit](https://github.com/terminalstate/callback-audit), done the
 same way as the [Stripe one](case-woocommerce-stripe-204.md): take a current bug in a
 widely-installed payment plugin and reproduce it against the plugin's own code. Everything here is
-public: no store data and no Mollie account.*
+public: no store data and no Mollie account. Reported upstream as
+[mollie/WooCommerce#1304](https://github.com/mollie/WooCommerce/issues/1304); Mollie confirmed it and
+is tracking the fix as PIWOO-951.*
 
 ## TL;DR
 
