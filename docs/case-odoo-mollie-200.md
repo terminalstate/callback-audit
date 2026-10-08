@@ -5,7 +5,8 @@ first in Python. It is the same bug as in the [Mollie for WooCommerce case](case
 this time in Odoo, the open-source ERP with a web shop, whose Mollie integration is part of Odoo
 Community. It is reproduced in a real Odoo with Odoo's own test framework. Everything here is public:
 no store data and no Mollie account. Reported upstream as
-[odoo/odoo#290678](https://github.com/odoo/odoo/issues/290678).*
+[odoo/odoo#290678](https://github.com/odoo/odoo/issues/290678) and fixed by Odoo in
+[odoo/odoo#290812](https://github.com/odoo/odoo/pull/290812).*
 
 ## TL;DR
 
