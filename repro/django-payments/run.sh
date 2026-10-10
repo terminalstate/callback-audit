@@ -2,6 +2,7 @@
 # Runs the reproduction tests inside django-payments' own test suite against a fake provider HTTP layer.
 #   ./run.sh                 django-payments at the pinned commit, latest stripe-python
 #   STRIPE_SPEC="stripe<15" ./run.sh   the same with the last stripe-python that still worked
+#   DJANGO_PAYMENTS_COMMIT=<sha> ./run.sh   any other commit of django-payments, e.g. a fix branch
 # Needs git and Python 3.10+.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -11,8 +12,8 @@ VENV="venv-django-payments"
 
 if [[ ! -f "$SRC/pyproject.toml" ]]; then
     git clone -q https://github.com/jazzband/django-payments.git "$SRC"
-    git -C "$SRC" checkout -q "$COMMIT"
 fi
+git -C "$SRC" checkout -q "$COMMIT"
 if [[ ! -x "$VENV/bin/python" ]]; then
     python3 -m venv "$VENV"
     "$VENV/bin/pip" install -q -e "$SRC[stripe,braintree,cybersource,sagepay,mercadopago,sofort]" pytest pytest-django pytest-cov

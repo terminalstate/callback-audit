@@ -6,6 +6,7 @@ A test module, `test_repro_terminal_state.py`, that runs inside django-payments'
 ```
 ./run.sh                       # django-payments at 8edfb1f, latest stripe-python (16.x)
 STRIPE_SPEC="stripe<15" ./run.sh   # the same with the last stripe-python that still worked
+DJANGO_PAYMENTS_COMMIT=<sha> ./run.sh   # any other commit, e.g. a fix branch
 ```
 
 Needs git and Python 3.10+.
@@ -23,7 +24,8 @@ Needs git and Python 3.10+.
 
 Tests named `*_current_behaviour` pass on the unmodified code and pin what happens today; `*_control` show
 the healthy path next to it; `*_if_fixed` are `xfail(strict=True)` and start failing the run once the bug is
-fixed, so the marker can be removed.
+fixed, so the marker can be removed. Each `xfail` names the exception it expects today (`raises=`), so a
+failure for any other reason shows up as a failure rather than as "not fixed yet".
 
 ## The five findings
 
@@ -55,3 +57,11 @@ fixed, so the marker can be removed.
 | Sage Pay `GET …/process/<token>/?crypt=@…` with `Status=OK` | **`TypeError` → 500**, `waiting` | same |
 
 12 passed, 1 skipped, 5 xfailed with stripe 16; 12 passed, 2 skipped, 4 xfailed with stripe 14.
+
+## Upstream (2026-10-10)
+
+- 1 is tracked in [jazzband/django-payments#485](https://github.com/jazzband/django-payments/issues/485), reported first.
+- 5 is [#499](https://github.com/jazzband/django-payments/issues/499); the fix is [#500](https://github.com/jazzband/django-payments/pull/500).
+  On its branch (`DJANGO_PAYMENTS_COMMIT=5607e9e ./run.sh`) the two Sage Pay `*_current_behaviour` tests fail and
+  `test_sagepay_return_if_fixed` reports `XPASS(strict)` — the expected flip: 3 failed by design, 10 passed,
+  1 skipped, 4 xfailed.

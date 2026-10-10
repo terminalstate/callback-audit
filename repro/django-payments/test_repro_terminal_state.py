@@ -17,7 +17,8 @@ HTTP call to the provider is faked:
 
 Tests named ``*_current_behaviour`` pass on the unmodified code and pin what happens today.
 Tests named ``*_if_fixed`` are ``xfail(strict=True)``: they fail today and will start passing (and
-fail the run, so the marker can be removed) once the bug is fixed.
+fail the run, so the marker can be removed) once the bug is fixed. Each marker names the exception it
+expects today (``raises=``): a failure for any other reason is reported, not counted as "not fixed yet".
 """
 
 from __future__ import annotations
@@ -257,7 +258,9 @@ def test_stripe_unsigned_webhook_confirms_control(client):
     assert payment.captured_amount == payment.total
 
 
-@pytest.mark.xfail(_stripe_major() >= 15, strict=True, reason="process_data must not use dict methods on a StripeObject")
+@pytest.mark.xfail(
+    _stripe_major() >= 15, strict=True, raises=AttributeError, reason="process_data must not use dict methods on a StripeObject"
+)
 @override_settings(PAYMENT_MODEL=PAYMENT_MODEL, PAYMENT_VARIANTS=_stripe_variants(use_token=True))
 def test_stripe_signed_webhook_if_fixed(client):
     payment = _payment("stripe", transaction_id="cs_test_1")
@@ -267,7 +270,7 @@ def test_stripe_signed_webhook_if_fixed(client):
     assert payment.status == PaymentStatus.CONFIRMED
 
 
-@pytest.mark.xfail(strict=True, reason="webhook lookup ignores use_token=False")
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="webhook lookup ignores use_token=False")
 @override_settings(PAYMENT_MODEL=PAYMENT_MODEL, PAYMENT_VARIANTS=_stripe_variants(use_token=False))
 def test_stripe_use_token_false_webhook_if_fixed(client):
     payment = _payment("stripe", transaction_id="cs_test_1")
@@ -356,7 +359,7 @@ def test_paypal_completed_sale_marked_confirmed_control(client):
     assert payment.status == PaymentStatus.CONFIRMED
 
 
-@pytest.mark.xfail(strict=True, reason="sale.state is never read")
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="sale.state is never read")
 @override_settings(PAYMENT_MODEL=PAYMENT_MODEL, PAYMENT_VARIANTS=PAYPAL_VARIANTS)
 def test_paypal_pending_sale_if_fixed(client):
     payment = _paypal_payment()
@@ -462,7 +465,7 @@ def test_cybersource_refund_uses_the_same_credit_service_control():
     assert re.search(rb"<(\w+:)?captureRequestID>7000000000000000001</(\w+:)?captureRequestID>", cap.bodies[0])
 
 
-@pytest.mark.xfail(strict=True, reason="sale should be ccAuthService + ccCaptureService")
+@pytest.mark.xfail(strict=True, raises=AssertionError, reason="sale should be ccAuthService + ccCaptureService")
 def test_cybersource_sale_if_fixed():
     cap = _SoapCapture()
     with patch("suds.transport.http.HttpTransport.send", new=cap):
@@ -499,7 +502,9 @@ def _sagepay_crypt(provider, payment, status="OK"):
         "3DSecureStatus": "OK",
         "CAVV": "AAABBBCCCDDD",
     }
-    return provider.aes_enc("&".join(f"{k}={v}" for k, v in fields.items()))
+    crypt = provider.aes_enc("&".join(f"{k}={v}" for k, v in fields.items()))
+    # what comes back in ?crypt= is text: "@" + hex (aes_enc returns bytes at 8edfb1f, str once fixed)
+    return crypt.decode() if isinstance(crypt, bytes) else crypt
 
 
 @override_settings(PAYMENT_MODEL=PAYMENT_MODEL, PAYMENT_VARIANTS=SAGEPAY_VARIANTS)
@@ -511,9 +516,9 @@ def test_sagepay_return_crashes_on_str_crypt_current_behaviour(client):
     provider = SagepayProvider(vendor="vendor", encryption_key="1234abcd1234abcd")
     payment = _payment("sagepay")
     crypt = _sagepay_crypt(provider, payment)
-    assert provider.aes_dec(crypt).startswith("VendorTxCode=")  # bytes in → works (what the suite tests)
+    assert provider.aes_dec(crypt.encode()).startswith("VendorTxCode=")  # bytes in → works (what the suite tests)
     with pytest.raises(TypeError, match="lstrip"):
-        client.get(f"/payments/process/{payment.token}/", {"crypt": crypt.decode()})
+        client.get(f"/payments/process/{payment.token}/", {"crypt": crypt})
     payment.refresh_from_db()
     assert payment.status == PaymentStatus.WAITING
     assert payment.captured_amount == 0
@@ -531,14 +536,14 @@ def test_sagepay_outgoing_crypt_is_rendered_as_bytes_repr_current_behaviour():
     assert 'value="b&#x27;@' in html or "value='b'@" in html
 
 
-@pytest.mark.xfail(strict=True, reason="aes_dec must accept the str Django gives it")
+@pytest.mark.xfail(strict=True, raises=TypeError, reason="aes_dec must accept the str Django gives it")
 @override_settings(PAYMENT_MODEL=PAYMENT_MODEL, PAYMENT_VARIANTS=SAGEPAY_VARIANTS)
 def test_sagepay_return_if_fixed(client):
     from payments.sagepay import SagepayProvider
 
     provider = SagepayProvider(vendor="vendor", encryption_key="1234abcd1234abcd")
     payment = _payment("sagepay")
-    response = client.get(f"/payments/process/{payment.token}/", {"crypt": _sagepay_crypt(provider, payment).decode()})
+    response = client.get(f"/payments/process/{payment.token}/", {"crypt": _sagepay_crypt(provider, payment)})
     assert response.status_code == 302
     payment.refresh_from_db()
     assert payment.status == PaymentStatus.CONFIRMED
