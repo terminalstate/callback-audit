@@ -1,8 +1,13 @@
-# Harness: invoiceninja, a Stripe redirect payment whose customer never comes back is never recorded
+# Harness: invoiceninja, Stripe webhooks that leave a payment unfinished
 
-A PHPUnit test file, `tests/Feature/PaymentDrivers/Stripe/StripeRedirectMethodWebhookStandTest.php`, that runs inside
-invoiceninja's own suite (`MockAccountData`, `DatabaseTransactions`, the project's `phpunit.xml`). Only Stripe's HTTP
-API is faked, through the `ApiRequestor::setHttpClient()` seam the project's own Stripe tests use.
+Two PHPUnit test files in `tests/Feature/PaymentDrivers/Stripe/`, one per finding, that run inside invoiceninja's own
+suite (`MockAccountData`, `DatabaseTransactions`, the project's `phpunit.xml`):
+
+- `StripeRedirectMethodWebhookStandTest.php`: a redirect payment (iDEAL, Bancontact, Klarna, …) whose customer never
+  comes back is never recorded. Reported in [#13341](https://github.com/invoiceninja/invoiceninja/issues/13341);
+  the maintainer has checked in a fix.
+- `SubscriptionDelayedSettlementStandTest.php`: a subscription paid with a method that starts as Pending (SEPA, BACS,
+  ACH, GoCardless, …) is never completed after the payment settles.
 
 ```
 DB_DATABASE=ninja_stand bash run.sh [WORK_DIR]     # invoiceninja v5-develop at 493c388
@@ -11,11 +16,15 @@ DB_DATABASE=ninja_stand bash run.sh [WORK_DIR]     # invoiceninja v5-develop at 
 Needs git, PHP 8.2+ with the extensions listed in invoiceninja's `composer.json`, Composer, and an empty MySQL or
 MariaDB database (`DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE`; defaults `127.0.0.1`, `3306`,
 `root`, `ninja`, `ninja_stand`). `run.sh` clones the pinned commit, installs the locked dependencies, migrates and
-seeds, copies the test file in and runs it; it refuses a database that already has tables. Where Packagist is not
+seeds, copies the test files in and runs them; it refuses a database that already has tables. Where Packagist is not
 reachable it fetches the locked packages from their GitHub sources instead (`fetch_vendor.py`, `write_installed.php`,
 `composer.phar` from the Composer GitHub release).
 
-## What is real and what is not
+## Redirect payment never recorded (#13341)
+
+Only Stripe's HTTP API is faked, through the `ApiRequestor::setHttpClient()` seam the project's own Stripe tests use.
+
+### What is real and what is not
 
 | Part | |
 |---|---|
@@ -23,7 +32,7 @@ reachable it fetches the locked packages from their GitHub sources instead (`fet
 | Stripe API: `GET /v1/payment_intents/{id}`, `GET /v1/charges/{id}` | fake: a `succeeded` PaymentIntent with `metadata.payment_hash`, and its charge |
 | The customer | approved at the bank and never came back to the return URL (nothing calls the return route) |
 
-## The finding
+### The finding
 
 For iDEAL, Bancontact, EPS, giropay, Przelewy24, Klarna, FPX, Alipay and SOFORT, the payment is written only when the
 browser comes back to the return URL ([iDeal.php#L55-L86](https://github.com/invoiceninja/invoiceninja/blob/493c3884e4214028bc5970cb41bafbd9c4d96401/app/PaymentDrivers/Stripe/iDeal.php#L55-L86),
@@ -40,7 +49,7 @@ money; the invoice stays unpaid.
 Stripe: "Listen for these events rather than waiting on a callback from the client. On the client, the customer could
 close the browser window or quit the app before the callback executes" (https://docs.stripe.com/payments/ideal/accept-a-payment?payment-ui=elements&api-integration=paymentintents).
 
-## Result at 493c388 (v5-develop, 2026-10-10)
+### Result at 493c388 (v5-develop, 2026-10-10)
 
 | test | input | HTTP | what the job did | payment |
 |---|---|---|---|---|
@@ -49,4 +58,38 @@ close the browser window or quit the app before the callback executes" (https://
 | `test_sepa_webhook_creates_completed_payment_control` | the same path for a `sepa_debit` PaymentIntent | — | same | COMPLETED, type SEPA |
 | `test_ideal_webhook_creates_completed_payment_if_fixed` (group `if-fixed`) | iDEAL; expects a COMPLETED payment | — | — | fails today |
 
-Default run (`--exclude-group if-fixed`): 3 tests OK. `--group if-fixed`: 1 failure, as expected while the bug is present.
+Default run of this file (`--exclude-group if-fixed`): 3 tests OK. `--group if-fixed`: 1 failure, as expected while the
+bug is present.
+
+## Subscription never completed after a Pending payment settles
+
+Nothing is faked: completing a payment that already exists makes no Stripe API call.
+
+### What is real and what is not
+
+| Part | |
+|---|---|
+| invoiceninja: `StripePaymentDriver::createPayment()` with a `billing_context` in the PaymentHash (as the SEPA return handler calls it), `SubscriptionService::completePurchase()`, the `/payment_webhook/{company_key}/{company_gateway}` route with Stripe signature verification, the `PaymentIntentWebhook` job | **real**, on a migrated and seeded database; the queue is `sync` |
+| The purchase | a subscription with one recurring product, its invoice and a PaymentHash, created with the project's factories |
+| The settlement | a signed `payment_intent.succeeded` for the PaymentIntent of the Pending payment |
+
+### The finding
+
+A billing portal purchase is finished by `SubscriptionService::completePurchase()`: it creates the recurring invoice,
+swaps the plan for `change_plan` and sends the purchase webhook. `BaseDriver::createPayment()` calls it only when the
+payment is created COMPLETED ([BaseDriver.php#L369-L382](https://github.com/invoiceninja/invoiceninja/blob/493c3884e4214028bc5970cb41bafbd9c4d96401/app/PaymentDrivers/BaseDriver.php#L369-L382)).
+Stripe SEPA, BACS, ACH, BECS, ACSS and bank transfer, GoCardless, and the redirect methods create the payment as
+Pending. When it settles, `payment_intent.succeeded` finds the existing payment and only sets it to COMPLETED
+([PaymentIntentWebhook.php#L78-L100](https://github.com/invoiceninja/invoiceninja/blob/493c3884e4214028bc5970cb41bafbd9c4d96401/app/PaymentDrivers/Stripe/Jobs/PaymentIntentWebhook.php#L78-L100));
+GoCardless and the hosted ACH poller do the same. The payment is Completed and the invoice Paid, but there is no
+recurring invoice, so the subscription is never billed again. A card purchase of the same plan works.
+
+### Result at 493c388 (v5-develop, 2026-10-10)
+
+| test | input | result |
+|---|---|---|
+| `test_pending_subscription_payment_never_completes_purchase_current_behaviour` | purchase paid with a payment created Pending (as SEPA does), then a signed `payment_intent.succeeded` posted to the route | 200, payment Completed, **0** recurring invoices for the subscription |
+| `test_completed_subscription_payment_creates_recurring_invoice_control` | the same purchase with the payment created COMPLETED (as a card is) | 1 recurring invoice with the subscription's `subscription_id` |
+| `test_pending_then_settled_subscription_payment_completes_purchase_if_fixed` (group `if-fixed`) | Pending, then settled; expects 1 recurring invoice | fails today (0 instead of 1) |
+
+Default run of this file: 2 tests OK. `--group if-fixed`: 1 failure, as expected while the bug is present.
