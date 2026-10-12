@@ -7,7 +7,8 @@ suite (`MockAccountData`, `DatabaseTransactions`, the project's `phpunit.xml`):
   comes back is never recorded. Reported in [#13341](https://github.com/invoiceninja/invoiceninja/issues/13341);
   the maintainer has checked in a fix.
 - `SubscriptionDelayedSettlementStandTest.php`: a subscription paid with a method that starts as Pending (SEPA, BACS,
-  ACH, GoCardless, …) is never completed after the payment settles.
+  ACH, GoCardless, …) is never completed after the payment settles. Reported in
+  [#13343](https://github.com/invoiceninja/invoiceninja/issues/13343).
 
 ```
 DB_DATABASE=ninja_stand bash run.sh [WORK_DIR]     # invoiceninja v5-develop at 493c388
@@ -61,7 +62,7 @@ close the browser window or quit the app before the callback executes" (https://
 Default run of this file (`--exclude-group if-fixed`): 3 tests OK. `--group if-fixed`: 1 failure, as expected while the
 bug is present.
 
-## Subscription never completed after a Pending payment settles
+## Subscription never completed after a Pending payment settles (#13343)
 
 Nothing is faked: completing a payment that already exists makes no Stripe API call.
 
