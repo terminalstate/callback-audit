@@ -1,0 +1,16 @@
+| # | level      | kind                  | jest   | reading                     | test                                                                                                    |
+|---|------------|-----------------------|--------|-----------------------------|---------------------------------------------------------------------------------------------------------|
+| 1 | provider   | current behaviour     | passed | holds                       | a delivery signed at receipt is accepted when its job runs 10 s later                                   |
+| 2 | provider   | current behaviour     | passed | holds                       | the same delivery is rejected when its job runs 301 s after receipt                                     |
+| 3 | route      | current behaviour     | passed | holds                       | only the raw-body parser is configured in front of the handler                                          |
+| 4 | route      | current behaviour     | failed | does not hold               | a Stripe-signed delivery is answered 200 and queued as received, without verification                   |
+| 5 | route      | current behaviour     | passed | holds                       | a delivery with a bogus signature is also answered 200 and queued                                       |
+| 6 | route->job | current behaviour     | passed | holds                       | a job that runs 10 s after receipt accepts the delivery and starts the payment workflow                 |
+| 7 | route->job | current behaviour     | failed | does not hold               | a job that runs 301 s after receipt rejects the delivery on every attempt and never starts the workflow |
+| 8 | route->job | if fixed (it.failing) | failed | passes: the bug looks fixed | a job that runs 301 s after receipt accepts the delivery acknowledged at receipt                        |
+
+Verdict: NOT reproduced as described. See the rows above and the jest logs.
+
+medusa commit: b3693d8d314ae99c4e889d8c789ed4a2dc6b6924 (fix/stripe-webhook-received-at)
+node:                 v22.23.3
+stripe (stripe-node): 15.12.0

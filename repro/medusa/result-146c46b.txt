@@ -1,0 +1,49 @@
+medusajs/medusa @ 146c46b0ad1146b40595c8ef586c4d5890982603
+Run: bash run.sh <new empty directory>  (end to end: GitHub fetch, corepack yarn 3.2.1, yarn install --immutable, turbo build, jest)
+Date (UTC): 2026-10-11T02:44:56Z   Wall time: 2m36.056s
+
+--- clone state after adding the test files (git status --porcelain) ---
+?? packages/medusa/src/api/hooks/__tests__/
+?? packages/modules/providers/payment-stripe/src/core/__tests__/webhook-verification-delay.spec.ts
+
+--- jest output (verbatim, filtered to suite, test and summary lines) ---
+PASS src/core/__tests__/webhook-verification-delay.spec.ts
+    ✓ current behaviour: a delivery signed at receipt is accepted when its job runs 10 s later (8 ms)
+    ✓ current behaviour: the same delivery is rejected when its job runs 301 s after receipt (11 ms)
+Tests:       2 passed, 2 total
+PASS src/api/hooks/__tests__/payment-webhook-verification-delay.spec.ts
+    ✓ current behaviour: only the raw-body parser is configured in front of the handler (3 ms)
+    ✓ current behaviour: a Stripe-signed delivery is answered 200 and queued as received, without verification (15 ms)
+    ✓ current behaviour: a delivery with a bogus signature is also answered 200 and queued (3 ms)
+    ✓ current behaviour: a job that runs 10 s after receipt accepts the delivery and starts the payment workflow (3 ms)
+    ✓ current behaviour: a job that runs 301 s after receipt rejects the delivery on every attempt and never starts the workflow (3 ms)
+    ✓ if fixed: a job that runs 301 s after receipt accepts the delivery acknowledged at receipt (2 ms)
+Tests:       6 passed, 6 total
+
+--- jest summaries (verbatim) ---
+[jest-payment-stripe.txt]
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+[jest-medusa.txt]
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+
+--- result table (printed by run.sh) ---
+| # | level      | kind                  | jest   | reading                                           | test                                                                                                    |
+|---|------------|-----------------------|--------|---------------------------------------------------|---------------------------------------------------------------------------------------------------------|
+| 1 | provider   | current behaviour     | passed | holds                                             | a delivery signed at receipt is accepted when its job runs 10 s later                                   |
+| 2 | provider   | current behaviour     | passed | holds                                             | the same delivery is rejected when its job runs 301 s after receipt                                     |
+| 3 | route      | current behaviour     | passed | holds                                             | only the raw-body parser is configured in front of the handler                                          |
+| 4 | route      | current behaviour     | passed | holds                                             | a Stripe-signed delivery is answered 200 and queued as received, without verification                   |
+| 5 | route      | current behaviour     | passed | holds                                             | a delivery with a bogus signature is also answered 200 and queued                                       |
+| 6 | route->job | current behaviour     | passed | holds                                             | a job that runs 10 s after receipt accepts the delivery and starts the payment workflow                 |
+| 7 | route->job | current behaviour     | passed | holds                                             | a job that runs 301 s after receipt rejects the delivery on every attempt and never starts the workflow |
+| 8 | route->job | if fixed (it.failing) | passed | fails today, as expected while the bug is present | a job that runs 301 s after receipt accepts the delivery acknowledged at receipt                        |
+
+Verdict: reproduced. All current-behaviour tests pass and the if-fixed test fails (as marked).
+
+jest exit codes: payment-stripe=0 medusa=0
+
+Note: for the 'if fixed' test, jest's 'passed' / ✓ means the test body failed, as declared with it.failing.
