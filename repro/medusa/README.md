@@ -1,6 +1,7 @@
 # Stand: Stripe webhooks verified only when the queued job runs (medusajs/medusa)
 
-A reproduction with the project's own test setup, at the pinned commit and at the commit with a fix.
+A reproduction with the project's own test setup, at the pinned commit and at the commit with a fix. Reported in
+[medusajs/medusa#17261](https://github.com/medusajs/medusa/issues/17261); the fix is [#17262](https://github.com/medusajs/medusa/pull/17262).
 
 ## What it shows
 
