@@ -1,7 +1,8 @@
 # Harness: Bagisto PayPal Standard, a buyer who doesn't come back pays but gets no order
 
 Two Pest tests added to Bagisto's own `packages/Webkul/Paypal/tests/Feature/PaypalStandardTest.php`
-(`paypal-standard-ipn-test.patch`), run inside the project's suite on a migrated and seeded database.
+(`paypal-standard-ipn-test.patch`), run inside the project's suite on a migrated and seeded database. Reported in
+[bagisto/bagisto#11531](https://github.com/bagisto/bagisto/issues/11531).
 
 ```
 DB_USERNAME=… DB_PASSWORD=… DB_DATABASE=bagisto_stand bash run.sh [WORK_DIR]      # 2.4 at 73e15b7
