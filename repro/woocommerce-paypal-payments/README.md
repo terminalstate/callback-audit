@@ -2,7 +2,9 @@
 
 A real WordPress site with WooCommerce and PayPal Payments. The script posts a `PAYMENT.CAPTURE.COMPLETED` delivery for
 an iDEAL order to the plugin's own `/wp-json/paypal/v1/incoming` endpoint while PayPal's API briefly fails, then runs
-WooCommerce's unpaid-order cleanup.
+WooCommerce's unpaid-order cleanup. Reported in
+[woocommerce/woocommerce-paypal-payments#4798](https://github.com/woocommerce/woocommerce-paypal-payments/issues/4798);
+the fix with a unit test is [#4799](https://github.com/woocommerce/woocommerce-paypal-payments/pull/4799).
 
 ```
 DB_HOST=127.0.0.1:3306 DB_USER=root DB_PASSWORD=… bash run.sh [WORK_DIR]        # PayPal Payments 4.1.3 (dev/develop)
