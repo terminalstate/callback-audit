@@ -1,0 +1,15 @@
+passed  records a refund made in the Stripe Dashboard once
+failed  does not record a partial refund a second time
+failed  does not report a full refund twice
+
+Other tests of the Stripe module: 14 passed, 0 failed.
+Verdict: reproduced. The webhook records the refund a second time (partial and full).
+
+date (UTC):       2026-10-17T09:55:49Z
+evershop commit:  e68b06a54f50f42548d2014fb2212cc8f7626869
+os:               Linux 6.18.44-fc-v139 x86_64
+node:             v22.22.0
+npm:              10.9.4
+stripe (node):    21.0.1
+jest:             29.7.0
+@swc/core:        1.15.10
