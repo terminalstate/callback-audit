@@ -1,6 +1,7 @@
 # Stand: Stripe charge.refunded records a refund made in EverShop a second time (evershopcommerce/evershop)
 
-A reproduction in the project's own jest suite, at the v2.3.0 release and at `dev` as of 2026-10-17.
+A reproduction in the project's own jest suite, at the v2.3.0 release and at `dev` as of 2026-10-17. Reported in
+[evershopcommerce/evershop#1112](https://github.com/evershopcommerce/evershop/issues/1112).
 
 ## What it shows
 
