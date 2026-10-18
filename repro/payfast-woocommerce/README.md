@@ -2,7 +2,8 @@
 
 A real WordPress site with WooCommerce and the Payfast plugin (WordPress.org release), a South African shop in sandbox
 mode, and a `pending` order. The script posts a signed ITN, as Payfast sends it, to the plugin's `?wc-api=WC_Gateway_PayFast`
-while the plugin's server-to-server validation request fails, then runs WooCommerce's unpaid-order cleanup.
+while the plugin's server-to-server validation request fails, then runs WooCommerce's unpaid-order cleanup. Reported in
+[woocommerce/woocommerce-gateway-payfast#519](https://github.com/woocommerce/woocommerce-gateway-payfast/issues/519).
 
 ```
 DB_HOST=127.0.0.1:3306 DB_USER=root DB_PASSWORD=… bash run.sh [WORK_DIR]          # Payfast Gateway 1.7.9
