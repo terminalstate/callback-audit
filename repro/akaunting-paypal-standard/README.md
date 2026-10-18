@@ -2,7 +2,9 @@
 
 The module records a PayPal Standard payment only after PayPal answers `VERIFIED` to the IPN postback in
 `Payment::confirm()`. That postback passes the IPN fields as the second argument of Guzzle's `post()`, which is the request
-*options* array, so PayPal receives an empty body and answers `INVALID`.
+*options* array, so PayPal receives an empty body and answers `INVALID`. Reported in
+[akaunting/module-paypal-standard#8](https://github.com/akaunting/module-paypal-standard/issues/8), fix proposed in
+[#9](https://github.com/akaunting/module-paypal-standard/pull/9).
 
 ```
 bash run.sh [WORK_DIR]

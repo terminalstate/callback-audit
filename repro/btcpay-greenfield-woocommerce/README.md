@@ -2,7 +2,8 @@
 
 A real WordPress site with WooCommerce and the BTCPay Greenfield plugin (from git, at a pinned commit), an order that is
 `on-hold` after `InvoiceProcessing`, and a signed `InvoiceSettled` webhook posted to `?wc-api=btcpaygf_default` while the
-plugin's request to re-fetch the invoice from BTCPay Server fails.
+plugin's request to re-fetch the invoice from BTCPay Server fails. Reported in
+[btcpayserver/woocommerce-greenfield-plugin#93](https://github.com/btcpayserver/woocommerce-greenfield-plugin/issues/93).
 
 ```
 DB_HOST=127.0.0.1:3306 DB_USER=root DB_PASSWORD=… bash run.sh [WORK_DIR]          # master on 2026-10-18
