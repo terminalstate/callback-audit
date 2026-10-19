@@ -3,6 +3,8 @@
 A real WordPress site with WooCommerce and the PayU plugin from git, a checkout order paid with PayU (`payustandard`) in the
 status the plugin gives new orders, and PayU's order notifications — PENDING, then COMPLETED — posted to
 `?wc-api=wc_gateway_payustandard` and signed with the POS second key. The same run against the released v2.11.0 is the control.
+Reported in [PayU-EMEA/woo-payu-payment-gateway#121](https://github.com/PayU-EMEA/woo-payu-payment-gateway/issues/121), fix proposed
+in [#122](https://github.com/PayU-EMEA/woo-payu-payment-gateway/pull/122).
 
 ```
 DB_HOST=127.0.0.1:3306 DB_USER=root DB_PASSWORD=… bash run.sh [WORK_DIR]          # master on 2026-10-18, control v2.11.0
@@ -36,6 +38,10 @@ the check looked at the WooCommerce order status, so the released 2.11.0 is not 
 | `master` 2026-10-18 | pending | pending → cancelled by `wc_cancel_unpaid_orders()` |
 | v2.11.0 | on-hold | processing |
 | `master` + reading the flag before storing the status | on-hold or pending | processing; a repeated COMPLETED changes nothing |
+
+The last row is the branch of #122: `PAYU_REPO=https://github.com/terminalstate/woo-payu-payment-gateway
+PAYU_COMMIT=40fbe046af806e78aecff0e1b1de1c8523253d7b bash run.sh` ends with `NOT REPRODUCED` — all three orders processing, the
+pending one left alone by `wc_cancel_unpaid_orders()`; the repeated COMPLETED was posted by hand (200, order unchanged).
 
 Run on 2026-10-19 (WordPress 7.1.3, WooCommerce 11.2.1, PHP 8.4, MariaDB 11.4):
 
