@@ -1,0 +1,15 @@
+{
+  "name": "stripe-sync-live-batch-stand",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@temporalio/activity": "1.15.0",
+    "@temporalio/client": "1.15.0",
+    "@temporalio/testing": "1.15.0",
+    "@temporalio/worker": "1.15.0",
+    "@temporalio/workflow": "1.15.0",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4",
+    "zod": "4.3.6"
+  }
+}
