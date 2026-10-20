@@ -1,0 +1,28 @@
+diff --git a/template/app/src/payment/lemonSqueezy/webhook.ts b/template/app/src/payment/lemonSqueezy/webhook.ts
+--- a/template/app/src/payment/lemonSqueezy/webhook.ts
++++ b/template/app/src/payment/lemonSqueezy/webhook.ts
+@@ -257,7 +257,7 @@ async function fetchUserCustomerPortalUrl({
+   lemonSqueezyId,
+ }: {
+   lemonSqueezyId: string;
+-}): Promise<string> {
++}): Promise<string | undefined> {
+   const { data: lemonSqueezyCustomer, error } =
+     await getCustomer(lemonSqueezyId);
+   if (error) {
+@@ -265,14 +265,7 @@ async function fetchUserCustomerPortalUrl({
+       `Error fetching customer portal URL for user lemonsqueezy id ${lemonSqueezyId}: ${error}`,
+     );
+   }
+-  const customerPortalUrl =
+-    lemonSqueezyCustomer.data.attributes.urls.customer_portal;
+-  if (!customerPortalUrl) {
+-    throw new Error(
+-      `No customer portal URL found for user lemonsqueezy id ${lemonSqueezyId}`,
+-    );
+-  }
+-  return customerPortalUrl;
++  return lemonSqueezyCustomer.data.attributes.urls.customer_portal ?? undefined;
+ }
+ 
+ function getPlanIdByVariantId(variantId: string): PaymentPlanId {
