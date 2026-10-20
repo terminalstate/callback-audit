@@ -3,6 +3,7 @@
 The repository's Temporal workflow code (`apps/service/src/temporal/workflows/*`, TypeScript stripped by `build.mjs`,
 nothing else changed) runs under `@temporalio/testing`'s local server, the same way as the project's own
 `apps/service/src/__tests__/workflow.test.ts`.
+Reported in [stripe/sync-engine#353](https://github.com/stripe/sync-engine/issues/353).
 
 ```
 bash run.sh [WORK_DIR]          # stripe/sync-engine dev as of 2026-10-20 (0.48.5); SYNC_ENGINE_COMMIT=… for another commit
