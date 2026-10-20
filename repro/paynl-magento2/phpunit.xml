@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<phpunit bootstrap="bootstrap.php" colors="false" cacheDirectory="tmp/.phpunit.cache">
+    <testsuites><testsuite name="stand"><directory>tests</directory></testsuite></testsuites>
+</phpunit>

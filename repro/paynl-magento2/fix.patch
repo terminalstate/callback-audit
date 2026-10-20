@@ -1,0 +1,16 @@
+diff --git a/Controller/Checkout/Exchange.php b/Controller/Checkout/Exchange.php
+index 035532fa..8b211a56 100644
+--- a/Controller/Checkout/Exchange.php
++++ b/Controller/Checkout/Exchange.php
+@@ -196,10 +196,7 @@ class Exchange extends PayAction implements CsrfAwareActionInterface
+             }
+ 
+         } catch (Throwable $exception) {
+-            $eResponse = new ExchangeResponse(
+-                $exception->getCode() !== PayExchange::ERROR_ACTION_FAULT,
+-                'Exception message: ' . $exception->getMessage()
+-            );
++            $eResponse = new ExchangeResponse(false, 'Exception message: ' . $exception->getMessage());
+         }
+ 
+         try {
