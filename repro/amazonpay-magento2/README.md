@@ -4,6 +4,7 @@ A unit test of the module's real `CheckoutSessionManagement::handlePayment()`, `
 `AsyncManagement\Charge` with the real Amazon Pay PHP SDK (2.8.1), without a Magento install: the module's dependencies
 come from the [Mage-OS](https://mirror.mage-os.org/) Composer mirror, and `bootstrap.php` is a minimal stand-in for
 Magento's unit-test bootstrap (Composer autoload plus generated Factory / ExtensionAttributes classes).
+Reported in [amzn/amazon-payments-magento-2-plugin#1304](https://github.com/amzn/amazon-payments-magento-2-plugin/issues/1304).
 
 ```
 bash run.sh [WORK_DIR]          # Amazon Pay for Magento 2, master as of 2026-10-20 (5.18.6); AMZ_COMMIT=… for another commit
