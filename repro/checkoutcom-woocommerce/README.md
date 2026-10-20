@@ -3,7 +3,8 @@
 A real WordPress site with WooCommerce and the Checkout.com plugin (WordPress.org release) in classic mode, a NAS sandbox
 account with 3-D Secure on, and an order in the state `process_payment()` leaves when the payment needs 3-D Secure. The
 script posts signed `payment_approved` and `payment_captured` webhooks, as Checkout.com sends them, to the plugin's
-`?wc-api=wc_checkoutcom_webhook`, then runs WooCommerce's unpaid-order cleanup.
+`?wc-api=wc_checkoutcom_webhook`, then runs WooCommerce's unpaid-order cleanup. Reported in
+[checkout/checkout-woocommerce-plugin#431](https://github.com/checkout/checkout-woocommerce-plugin/issues/431).
 
 ```
 DB_HOST=127.0.0.1:3306 DB_USER=root DB_PASSWORD=… bash run.sh [WORK_DIR]          # Checkout.com plugin 5.1.4.4
