@@ -4,6 +4,7 @@ The template's `template/app/src/payment/lemonSqueezy/webhook.ts` runs under vit
 `@lemonsqueezy/lemonsqueezy.js` SDK. Wasp's generated modules (`wasp/server`, `wasp/server/api`) and `@prisma/client`
 are stand-ins in `mocks/`; only Lemon Squeezy's API is faked (`GET /v1/customers/:id`), and the request carries a real
 HMAC `X-Signature`.
+Reported in [wasp-lang/open-saas#755](https://github.com/wasp-lang/open-saas/issues/755).
 
 ```
 bash run.sh [WORK_DIR]          # open-saas main as of 2026-10-20; OPENSAAS_COMMIT=… for another commit
