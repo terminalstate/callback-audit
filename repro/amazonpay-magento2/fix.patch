@@ -1,0 +1,41 @@
+diff --git a/Model/CheckoutSessionManagement.php b/Model/CheckoutSessionManagement.php
+index b2f2626..4d9e9ba 100755
+--- a/Model/CheckoutSessionManagement.php
++++ b/Model/CheckoutSessionManagement.php
+@@ -44,6 +44,7 @@ use Magento\SalesRule\Model\Coupon\UpdateCouponUsages;
+ use Magento\Customer\Api\AccountManagementInterface;
+ use Magento\Framework\App\ObjectManager;
+ use Magento\Framework\Exception\EmailNotConfirmedException;
++use Magento\Framework\Exception\LocalizedException;
+ use Magento\Framework\Exception\InvalidEmailOrPasswordException;
+ use Magento\Framework\Exception\State\UserLockedException;
+ 
+@@ -1354,7 +1355,7 @@ class CheckoutSessionManagement implements \Amazon\Pay\Api\CheckoutSessionManage
+             if ($completeCheckoutStatus != '202' &&
+                 $this->amazonConfig->getPaymentAction() == PaymentAction::AUTHORIZE_AND_CAPTURE) {
+                 // capture on Amazon Pay
+-                $this->amazonAdapter->captureCharge(
++                $captureResult = $this->amazonAdapter->captureCharge(
+                     $order->getStoreId(),
+                     $chargeId,
+                     $order->getGrandTotal(),
+@@ -1362,7 +1363,9 @@ class CheckoutSessionManagement implements \Amazon\Pay\Api\CheckoutSessionManage
+                 );
+                 $this->setProcessing($payment, false);
+                 // capture and invoice on the Magento side
+-                if ($this->amazonConfig->getAuthorizationMode() == AuthorizationMode::SYNC) {
++                if ($this->amazonConfig->getAuthorizationMode() == AuthorizationMode::SYNC
++                    && in_array($captureResult['status'] ?? null, [200, 201])
++                ) {
+                     $this->asyncCharge->capture($order, $chargeId, $order->getGrandTotal());
+                 }
+             }
+@@ -1379,6 +1382,8 @@ class CheckoutSessionManagement implements \Amazon\Pay\Api\CheckoutSessionManage
+             $chargeState = $amazonCharge['statusDetails']['state'];
+ 
+             switch ($chargeState) {
++                case 'Declined':
++                    throw new LocalizedException(__('The Amazon Pay charge was declined.'));
+                 case 'AuthorizationInitiated':
+                     $payment->setIsTransactionClosed(false);
+                     $this->setPending($payment);
