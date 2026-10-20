@@ -3,6 +3,8 @@
 A unit test of the module's real `Controller/Checkout/Exchange` with the real Pay. PHP SDK (1.2.3), without a Magento install:
 the module's dependencies come from the [Mage-OS](https://mirror.mage-os.org/) Composer mirror, and `bootstrap.php` is a
 minimal stand-in for Magento's unit-test bootstrap (Composer autoload plus generated Factory / ExtensionAttributes classes).
+Reported in [paynl/magento2-plugin#248](https://github.com/paynl/magento2-plugin/issues/248), fix in
+[#249](https://github.com/paynl/magento2-plugin/pull/249).
 
 ```
 bash run.sh [WORK_DIR]          # Pay. for Magento 2, master as of 2026-10-20 (4.0.17); PAYNL_COMMIT=… for another commit
