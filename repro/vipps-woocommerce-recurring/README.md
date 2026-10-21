@@ -4,7 +4,7 @@ A real WordPress site with WooCommerce, [WooCommerce Subscriptions core](https:/
 (GPL) in place of the paid WooCommerce Subscriptions, and the Vipps MobilePay plugin (`woo-vipps`) from git. A renewal order paid with
 Vipps MobilePay Recurring goes through the gateway's `scheduled_subscription_payment()` — the hook WooCommerce Subscriptions calls on
 the renewal date — and the plugin's own API client talks to a stand-in for the Recurring API. Reported in
-[vippsas/vipps-woocommerce#ISSUE](https://github.com/vippsas/vipps-woocommerce/issues/ISSUE).
+[vippsas/vipps-woocommerce#420](https://github.com/vippsas/vipps-woocommerce/issues/420).
 
 ```
 DB_HOST=127.0.0.1:3306 DB_USER=root DB_PASSWORD=… bash run.sh [WORK_DIR]   # master on 2026-10-20 (6.3.3)

@@ -3,7 +3,7 @@
 A real WordPress site with WooCommerce and the Flutterwave plugin from git, a pending checkout order paid with Flutterwave, and
 Flutterwave's `charge.completed` webhook posted to `?wc-api=flw_wc_payment_webhook` with the merchant's secret hash in `verif-hash`.
 The plugin verifies the transaction through its own API client; the Flutterwave API behind it is a stand-in. Reported in
-[Flutterwave/Woocommerce-v2#ISSUE](https://github.com/Flutterwave/Woocommerce-v2/issues/ISSUE).
+[Flutterwave/Woocommerce-v2#105](https://github.com/Flutterwave/Woocommerce-v2/issues/105).
 
 ```
 DB_HOST=127.0.0.1:3306 DB_USER=root DB_PASSWORD=… bash run.sh [WORK_DIR]                       # master on 2026-10-08 (3.3.2)
