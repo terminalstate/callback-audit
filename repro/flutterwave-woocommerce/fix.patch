@@ -1,0 +1,108 @@
+diff --git a/includes/class-flw-wc-payment-gateway.php b/includes/class-flw-wc-payment-gateway.php
+index e72a683..b403eba 100644
+--- a/includes/class-flw-wc-payment-gateway.php
++++ b/includes/class-flw-wc-payment-gateway.php
+@@ -919,19 +919,28 @@ class FLW_WC_Payment_Gateway extends WC_Payment_Gateway {
+ 				);
+ 			}
+ 
+-			if ( '' !== $event_id ) {
+-				$seen[] = $event_id;
+-				$order->update_meta_data( '_flw_processed_webhook_ids', array_slice( $seen, -20 ) );
+-				$order->save();
+-			}
+-
+ 			Flutterwave_Signoz_Logger::instance()->track_request_sent(
+ 				'GET',
+ 				$txn_ref,
+ 				'/transactions/verify_by_reference?tx_ref='
+ 			);
+ 
+-			$sdk->set_event_handler( new FlwEventHandler( $order ) )->webhook_verify( $event_type, $event_data );
++			if ( ! $sdk->set_event_handler( new FlwEventHandler( $order ) )->webhook_verify( $event_type, $event_data ) ) {
++				wp_send_json(
++					array(
++						'status'  => 'error',
++						'message' => 'Transaction could not be verified, retry later',
++					),
++					WP_Http::SERVICE_UNAVAILABLE
++				);
++			}
++
++			if ( '' !== $event_id ) {
++				$seen[] = $event_id;
++				$order->update_meta_data( '_flw_processed_webhook_ids', array_slice( $seen, -20 ) );
++				$order->save();
++			}
++
+ 			wp_send_json(
+ 				array(
+ 					'status'  => 'success',
+diff --git a/includes/client/class-flw-wc-payment-gateway-sdk.php b/includes/client/class-flw-wc-payment-gateway-sdk.php
+index 05e91cd..3ee244e 100644
+--- a/includes/client/class-flw-wc-payment-gateway-sdk.php
++++ b/includes/client/class-flw-wc-payment-gateway-sdk.php
+@@ -203,9 +203,9 @@ final class FLW_WC_Payment_Gateway_Sdk {
+ 	 *
+ 	 * @param string $tx_ref This is the unique reference for the transaction.
+ 	 *
+-	 * @return void The requery transaction.
++	 * @return bool False when Flutterwave could not be reached or understood, so the outcome is unknown.
+ 	 */
+-	public function requery_transaction( string $tx_ref ) {
++	public function requery_transaction( string $tx_ref ): bool {
+ 		++$this->requery_count;
+ 		$this->logger->notice( 'Requerying Transaction....' . $tx_ref );
+ 
+@@ -219,21 +219,22 @@ final class FLW_WC_Payment_Gateway_Sdk {
+ 			// Could not reach Flutterwave. Leave the order where it is and let the
+ 			// webhook settle it rather than guessing at an outcome.
+ 			$this->logger->notice( 'Transaction Requeried Failed. Awaiting Webhook Verification...' );
+-			return;
++			return false;
+ 		}
+ 
+ 		if ( ! isset( $this->event_handler ) ) {
+-			return;
++			return true;
+ 		}
+ 
+ 		if ( 'success' === ( $response->status ?? '' ) && isset( $response->data ) ) {
+ 			$this->logger->notice( 'Transaction Requeried Successfully' );
+ 			$this->event_handler->on_successful( $response->data );
+-			return;
++			return true;
+ 		}
+ 
+ 		$this->logger->notice( 'Transaction Requeried Failed' );
+ 		$this->event_handler->on_failure( $response );
++		return true;
+ 	}
+ 
+ 	/**
+@@ -272,8 +273,10 @@ final class FLW_WC_Payment_Gateway_Sdk {
+ 	 *
+ 	 * @param string $event_type The event type.
+ 	 * @param object $event_data The event data.
++	 *
++	 * @return bool False when the transaction could not be verified with Flutterwave.
+ 	 */
+-	public function webhook_verify( string $event_type, object $event_data ) {
++	public function webhook_verify( string $event_type, object $event_data ): bool {
+ 		$this->logger->notice( 'Webhook Verification Started' );
+ 		$this->logger->notice( 'Event Type: ' . $event_type );
+ 
+@@ -284,10 +287,10 @@ final class FLW_WC_Payment_Gateway_Sdk {
+ 		}
+ 
+ 		if ( method_exists( $this, 'requery_transaction' ) ) {
+-			$this->requery_transaction( $event_data->tx_ref );
+-		} else {
+-			$this->logger->notice( 'Webhook Verification Failed' );
++			return $this->requery_transaction( $event_data->tx_ref );
+ 		}
++		$this->logger->notice( 'Webhook Verification Failed' );
++		return false;
+ 	}
+ 
+ 	/**
