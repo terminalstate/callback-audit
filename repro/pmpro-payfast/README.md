@@ -3,7 +3,7 @@
 A real WordPress site with Paid Memberships Pro and the Payfast add-on from git. A buyer checks out through PMPro's checkout
 page; the add-on saves the order as `token` and redirects to Payfast. The script then posts the ITN for the completed payment
 to the `notify_url` from that redirect, signed the way Payfast signs it, while the add-on's server-to-server validation request
-fails.
+fails. Reported in [strangerstudios/pmpro-payfast#113](https://github.com/strangerstudios/pmpro-payfast/issues/113).
 
 ```
 DB_HOST=127.0.0.1:3306 DB_USER=root DB_PASSWORD=… bash run.sh [WORK_DIR]
@@ -46,7 +46,7 @@ Payment" for the order, and nothing scheduled looks at `token` orders.
 | `fix.patch`, the timed-out ITN re-sent with validation `VALID` | 200 | `success` | granted |
 | `fix.patch`, the same ITN once more | 200 | `success`, no second checkout and no e-mails | granted |
 
-`fix.patch` is the proposed change: the upfront 200 is removed, `pmpro_pfValidData()` sends 503 for a `WP_Error` and
+`fix.patch` is the change proposed in [#114](https://github.com/strangerstudios/pmpro-payfast/pull/114): the upfront 200 is removed, `pmpro_pfValidData()` sends 503 for a `WP_Error` and
 for any answer that is not Payfast's verdict (not 200, or a body other than `VALID`/`INVALID`), and a one-time `COMPLETE` ITN for
 an order that is already `success` is skipped, as the subscription branch already does. `INVALID`, a bad signature and an amount
 mismatch still get 200. `run.sh` applies it to the stand's copy of the add-on at the end and reverts it afterwards.
