@@ -1,0 +1,33 @@
+diff -ru a/classes/class-nets-easy-api-callbacks.php b/classes/class-nets-easy-api-callbacks.php
+--- a/classes/class-nets-easy-api-callbacks.php	2026-10-20 10:46:53.672214928 +0000
++++ b/classes/class-nets-easy-api-callbacks.php	2026-10-20 10:46:53.723348098 +0000
+@@ -97,7 +97,16 @@
+ 			Nets_Easy_Logger::log( 'Aborting Payment created API callback. Order ' . $order->get_order_number() . '(order ID ' . $order->get_id() . ') already processed.' );
+ 		} else {
+ 			Nets_Easy_Logger::log( 'Order status not set correctly for order ' . $order->get_order_number() . ' during checkout process. Setting order status to Processing/Completed in API callback.' );
+-			wc_dibs_confirm_dibs_order( $order->get_id() );
++			$result = wc_dibs_confirm_dibs_order( $order->get_id() );
++			if ( is_wp_error( $result ) ) {
++				$attempts = (int) $order->get_meta( '_dibs_callback_attempts' ) + 1;
++				$order->update_meta_data( '_dibs_callback_attempts', $attempts );
++				$order->save();
++				if ( $attempts < 10 ) {
++					as_schedule_single_action( time() + 300 * $attempts, 'dibs_payment_created_callback', array( $payment_id, $order_number, $amount ) );
++				}
++				return;
++			}
+ 			$this->check_order_totals( $order, $amount );
+ 		}
+ 	}
+diff -ru a/includes/nets-easy-functions.php b/includes/nets-easy-functions.php
+--- a/includes/nets-easy-functions.php	2026-10-20 10:46:53.688922037 +0000
++++ b/includes/nets-easy-functions.php	2026-10-20 10:46:53.721460440 +0000
+@@ -212,7 +212,7 @@
+ 				$request->get_error_message()
+ 			)
+ 		);
+-		return;
++		return $request;
+ 	}
+ 
+ 	if ( isset( $request['payment']['summary']['reservedAmount'] ) || isset( $request['payment']['summary']['chargedAmount'] ) || isset( $request['payment']['subscription']['id'] ) ) {
