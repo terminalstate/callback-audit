@@ -1,0 +1,14 @@
+diff --git a/includes/class-wc-gateway-paystack.php b/includes/class-wc-gateway-paystack.php
+index 6404c31..8f03ed6 100644
+--- a/includes/class-wc-gateway-paystack.php
++++ b/includes/class-wc-gateway-paystack.php
+@@ -1403,7 +1403,8 @@ class WC_Gateway_Paystack extends WC_Payment_Gateway_CC {
+ 		$paystack_response = $this->get_paystack_transaction( $event->data->reference );
+ 
+ 		if ( false === $paystack_response ) {
+-			return;
++			status_header( 503 );
++			exit;
+ 		}
+ 
+ 		$order_details = explode( '_', $paystack_response->data->reference );
