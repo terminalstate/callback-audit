@@ -1,0 +1,16 @@
+diff --git a/includes/class-wc-gocardless-gateway.php b/includes/class-wc-gocardless-gateway.php
+--- a/includes/class-wc-gocardless-gateway.php
++++ b/includes/class-wc-gocardless-gateway.php
+@@ -2384,6 +2384,12 @@
+ 		$billing_request = WC_GoCardless_API::get_billing_request( $billing_request_id );
+ 		if ( is_wp_error( $billing_request ) ) {
+ 			wc_gocardless()->log( sprintf( '%s - Failed to retrieve billing request.', __METHOD__ ) );
++			$attempts = (int) $order->get_meta( '_gocardless_fulfilled_attempts' ) + 1;
++			$order->update_meta_data( '_gocardless_fulfilled_attempts', $attempts );
++			$order->save();
++			if ( $attempts < 10 ) {
++				WC()->queue()->schedule_single( time() + 300 * $attempts, 'woocommerce_gocardless_process_webhook_payload_async', array( array( 'events' => array( $event ) ) ), 'woocommerce-gocardless-webhook' );
++			}
+ 			return false;
+ 		}
+ 		if ( empty( $billing_request['billing_requests'] ) ) {
