@@ -4,7 +4,8 @@ A real WordPress site with WooCommerce and the plugin as released on WordPress.o
 is identical to GitHub `develop` on 2026-10-18), a pending Pay by Bank order whose billing request was still `fulfilling` when the
 buyer came back (or whose buyer never came back), and GoCardless's webhooks posted to `?wc-api=wc_gateway_gocardless&request=webhook`,
 signed with the webhook secret (`Webhook-Signature` = HMAC-SHA256 of the body). The jobs the endpoint queues are run through Action
-Scheduler's own runner.
+Scheduler's own runner. Reported in
+[gocardless/woocommerce-gateway-gocardless#208](https://github.com/gocardless/woocommerce-gateway-gocardless/issues/208).
 
 ```
 DB_HOST=127.0.0.1:3306 DB_USER=root DB_PASSWORD=… bash run.sh [WORK_DIR]                                  # 3.0.3
