@@ -2,8 +2,8 @@
 
 A real WordPress site with WooCommerce and the Paystack plugin from git, a pending checkout order paid with Paystack, and Paystack's
 `charge.success` posted to `?wc-api=tbz_wc_paystack_webhook`, signed with the secret key (`x-paystack-signature` = HMAC-SHA512 of
-the body). Related: [PaystackOSS/woo-paystack#147](https://github.com/PaystackOSS/woo-paystack/issues/147) (same symptom, another
-cause: the `sleep(10)` before the reply).
+the body). Reported in [a comment on PaystackOSS/woo-paystack#147](https://github.com/PaystackOSS/woo-paystack/issues/147#issuecomment-6332103424)
+(same symptom, another cause: the `sleep(10)` before the reply).
 
 ```
 DB_HOST=127.0.0.1:3306 DB_USER=root DB_PASSWORD=… bash run.sh [WORK_DIR]                                  # master on 2026-10-20 (5.8.5)

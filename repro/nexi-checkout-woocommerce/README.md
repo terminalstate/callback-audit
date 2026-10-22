@@ -3,7 +3,8 @@
 A real WordPress site with WooCommerce and the plugin as released on WordPress.org (2.14.8 = GitHub `master` on 2026-10-06; the
 GitHub tree has no `vendor/`), a pending checkout order paid with Swish (`nets_easy_swish`) whose buyer did not come back, and Nexi's
 `payment.checkout.completed` posted to `?wc-api=DIBS_Api_Callbacks&dibs-payment-created-callback=1`. The job the handler schedules
-(`dibs_payment_created_callback`, +120 s) is run through Action Scheduler's own runner.
+(`dibs_payment_created_callback`, +120 s) is run through Action Scheduler's own runner. Reported in
+[krokedil/dibs-easy-for-woocommerce#367](https://github.com/krokedil/dibs-easy-for-woocommerce/issues/367).
 
 ```
 DB_HOST=127.0.0.1:3306 DB_USER=root DB_PASSWORD=… bash run.sh [WORK_DIR]                                  # 2.14.8
