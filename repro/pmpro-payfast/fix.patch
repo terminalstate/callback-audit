@@ -1,5 +1,5 @@
 diff --git a/services/payfast_itn_handler.php b/services/payfast_itn_handler.php
-index d9a1afa..c764b7f 100644
+index d9a1afa..f24b617 100644
 --- a/services/payfast_itn_handler.php
 +++ b/services/payfast_itn_handler.php
 @@ -74,12 +74,6 @@ $pfParamString = '';
@@ -29,23 +29,42 @@ index d9a1afa..c764b7f 100644
  		$morder->getMembershipLevel();
  		$morder->getUser();
  		// update membership
-@@ -524,6 +525,7 @@ function pmpro_pfValidData( $pfHost = 'www.payfast.co.za', $pfParamString = '',
+@@ -306,6 +307,12 @@ function pmpro_payfast_itnlog( $s ) {
+ */
+ function pmpro_payfast_ipnExit() {
+ 	global $logstr;
++
++	// Tell Payfast the ITN was received, unless an error status was already set (e.g. 503 so Payfast re-sends it).
++	if ( ! headers_sent() && http_response_code() < 400 ) {
++		status_header( 200 );
++	}
++
+ 	// for log
+ 	if ( $logstr ) {
+ 		$logstr = __( 'Logged On: ', 'pmpro-payfast' ) . date( 'm/d/Y H:i:s' ) . "\n" . $logstr . "\n-------------\n";
+@@ -524,18 +531,24 @@ function pmpro_pfValidData( $pfHost = 'www.payfast.co.za', $pfParamString = '',
  	if ( is_wp_error( $response ) ) {
  		$error_message = $response->get_error_message();
  		pmpro_payfast_itnlog( 'Error validating data: ' . $error_message );
+-		die( 'Error validating data: ' . esc_html( $error_message ) );
 +		status_header( 503 );
- 		die( 'Error validating data: ' . esc_html( $error_message ) );
++		pmpro_payfast_ipnExit();
  	}
  
-@@ -533,9 +535,13 @@ function pmpro_pfValidData( $pfHost = 'www.payfast.co.za', $pfParamString = '',
+-	$body = wp_remote_retrieve_body( $response );
++	$code = wp_remote_retrieve_response_code( $response );
++	$body = trim( wp_remote_retrieve_body( $response ) );
  
- 	if ( $body === 'VALID' ) {
+ 	pmpro_payfast_itnlog( $body );
+ 
+-	if ( $body === 'VALID' ) {
++	if ( 200 === $code && 'VALID' === $body ) {
  		return( true );
 -	} else {
 -		return( false );
  	}
 +
-+	if ( 200 !== wp_remote_retrieve_response_code( $response ) || 'INVALID' !== trim( $body ) ) {
++	if ( 200 !== $code || 'INVALID' !== $body ) {
 +		status_header( 503 );
 +	}
 +
