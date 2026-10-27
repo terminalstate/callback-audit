@@ -1,6 +1,6 @@
-# Harness: invoiceninja, Stripe webhooks that leave a payment unfinished
+# Harness: invoiceninja, payment webhooks that leave a payment unfinished
 
-Two PHPUnit test files in `tests/Feature/PaymentDrivers/Stripe/`, one per finding, that run inside invoiceninja's own
+Three PHPUnit test files in `tests/Feature/PaymentDrivers/`, one per finding, that run inside invoiceninja's own
 suite (`MockAccountData`, `DatabaseTransactions`, the project's `phpunit.xml`):
 
 - `StripeRedirectMethodWebhookStandTest.php`: a redirect payment (iDEAL, Bancontact, Klarna, …) whose customer never
@@ -9,6 +9,8 @@ suite (`MockAccountData`, `DatabaseTransactions`, the project's `phpunit.xml`):
 - `SubscriptionDelayedSettlementStandTest.php`: a subscription paid with a method that starts as Pending (SEPA, BACS,
   ACH, GoCardless, …) is never completed after the payment settles. Reported in
   [#13343](https://github.com/invoiceninja/invoiceninja/issues/13343).
+- `RazorpayWebhookStubStandTest.php`: the Razorpay webhook handler is an empty stub, so a payment whose browser never
+  posts back is never recorded.
 
 ```
 DB_DATABASE=ninja_stand bash run.sh [WORK_DIR]     # invoiceninja v5-develop at 493c388
@@ -94,3 +96,39 @@ recurring invoice, so the subscription is never billed again. A card purchase of
 | `test_pending_then_settled_subscription_payment_completes_purchase_if_fixed` (group `if-fixed`) | Pending, then settled; expects 1 recurring invoice | fails today (0 instead of 1) |
 
 Default run of this file: 2 tests OK. `--group if-fixed`: 1 failure, as expected while the bug is present.
+
+## Razorpay webhook is an empty stub
+
+No provider HTTP call is faked.
+
+### What is real and what is not
+
+| Part | |
+|---|---|
+| invoiceninja: the `/payment_webhook/{company_key}/{company_gateway}` route, `RazorpayPaymentDriver::processWebhookRequest()`, the browser-return path `Razorpay\Hosted::paymentResponse()` with the SDK's signature check, payment creation | **real**, on a migrated and seeded database |
+| Razorpay | not called: the webhook test posts a realistic `payment.captured` body; the control carries a genuine payment signature computed with the gateway's API secret |
+| The customer | approved the payment and closed the tab before the Checkout handler posted back (nothing calls the return route in the webhook tests) |
+
+### The finding
+
+`RazorpayPaymentDriver::processWebhookRequest()` is empty ([RazorpayPaymentDriver.php#L122-L125](https://github.com/invoiceninja/invoiceninja/blob/493c3884e4214028bc5970cb41bafbd9c4d96401/app/PaymentDrivers/RazorpayPaymentDriver.php#L122-L125)),
+and the controller returns its `null` as an empty 200 ([PaymentWebhookController.php#L19-L31](https://github.com/invoiceninja/invoiceninja/blob/493c3884e4214028bc5970cb41bafbd9c4d96401/app/Http/Controllers/PaymentWebhookController.php#L19-L31)),
+so every Razorpay event sent to the route is acknowledged and dropped. A Razorpay payment is recorded only on the browser
+return, after the signature check ([Hosted.php#L82-L138](https://github.com/invoiceninja/invoiceninja/blob/493c3884e4214028bc5970cb41bafbd9c4d96401/app/PaymentDrivers/Razorpay/Hosted.php#L82-L138)).
+Razorpay captures authorised payments automatically by default
+([capture settings](https://razorpay.com/docs/payments/payments/capture-settings/)), so when the Checkout handler never
+runs, Razorpay has the money and the invoice stays unpaid.
+
+Razorpay: "This could be because of a slow network connection or your customer closing the window while processing the
+payment." (https://razorpay.com/docs/webhooks/)
+
+### Result at 493c388 (v5-develop, 2026-10-10)
+
+| test | input | result |
+|---|---|---|
+| `test_captured_webhook_is_a_noop_current_behaviour` | a `payment.captured` event for the order stored in the PaymentHash, posted to the route | 200, empty body, no payment, invoice balance unchanged |
+| `test_browser_return_records_completed_payment_control` | the browser return through `Hosted::paymentResponse()` with a valid signature | COMPLETED payment |
+| `test_captured_webhook_records_completed_payment_if_fixed` (group `if-fixed`) | `payment.captured`; expects a COMPLETED payment | fails today |
+
+Default run of this file: 2 tests OK. `--group if-fixed`: 1 failure, as expected while the bug is present. The Razorpay
+files above are unchanged on v5-develop as of 2026-10-27.
