@@ -13,8 +13,10 @@
  *
  * No provider HTTP call is faked. The control computes a genuine Razorpay payment
  * signature with the gateway's API secret exactly as the SDK verifies it
- * (hash_hmac('sha256', order_id|payment_id, secret)); the webhook tests compute no
- * signature because the stub verifies nothing.
+ * (hash_hmac('sha256', order_id|payment_id, secret)). The current-behaviour webhook
+ * test sends no signature because the stub verifies nothing; the if-fixed test signs
+ * the body with a webhook secret, as a handler that verifies X-Razorpay-Signature
+ * needs (invoiceninja PR #13397 adds a webhookSecret gateway field).
  */
 
 namespace Tests\Feature\PaymentDrivers;
@@ -37,6 +39,8 @@ class RazorpayWebhookStubStandTest extends TestCase
     use MockAccountData;
 
     private const API_SECRET = 'razorpay_secret_stand';
+
+    private const WEBHOOK_SECRET = 'razorpay_webhook_secret_stand';
 
     private CompanyGateway $company_gateway;
 
@@ -113,15 +117,23 @@ class RazorpayWebhookStubStandTest extends TestCase
 
     /**
      * If fixed: a payment.captured webhook should record a COMPLETED payment, the
-     * way every driver with a real webhook handler does. This fails at 493c388
-     * because processWebhookRequest() is an empty stub.
+     * way every driver with a real webhook handler does. The body is signed with
+     * the gateway's webhook secret. This fails at 493c388 because
+     * processWebhookRequest() is an empty stub.
      */
     #[Group('if-fixed')]
     public function test_captured_webhook_records_completed_payment_if_fixed(): void
     {
+        $this->company_gateway->setConfig([
+            'apiKey' => 'rzp_test_stand',
+            'apiSecret' => self::API_SECRET,
+            'webhookSecret' => self::WEBHOOK_SECRET,
+        ]);
+        $this->company_gateway->save();
+
         $this->makeOrderPaymentHash('order_stand_fixed');
 
-        $this->postRazorpayWebhook('pay_fixed_stand', 'order_stand_fixed')->assertStatus(200);
+        $this->postRazorpayWebhook('pay_fixed_stand', 'order_stand_fixed', self::WEBHOOK_SECRET)->assertStatus(200);
 
         $payment = Payment::query()->where('transaction_reference', 'pay_fixed_stand')->first();
 
@@ -151,11 +163,11 @@ class RazorpayWebhookStubStandTest extends TestCase
     }
 
     /**
-     * POST a realistic Razorpay webhook to the real route. Razorpay's
-     * processWebhookRequest() performs no signature verification (it is an empty
-     * stub), so there is no signature to compute.
+     * POST a realistic Razorpay webhook to the real route. With a webhook secret the
+     * body is signed the way Razorpay signs it (X-Razorpay-Signature, HMAC-SHA256 of
+     * the raw body).
      */
-    private function postRazorpayWebhook(string $paymentId, string $orderId): \Illuminate\Testing\TestResponse
+    private function postRazorpayWebhook(string $paymentId, string $orderId, ?string $webhookSecret = null): \Illuminate\Testing\TestResponse
     {
         $payload = json_encode([
             'event' => 'payment.captured',
@@ -175,13 +187,19 @@ class RazorpayWebhookStubStandTest extends TestCase
 
         $url = sprintf('/payment_webhook/%s/%s', $this->company->company_key, $this->company_gateway->hashed_id);
 
+        $server = ['CONTENT_TYPE' => 'application/json'];
+
+        if ($webhookSecret !== null) {
+            $server['HTTP_X_RAZORPAY_SIGNATURE'] = hash_hmac('sha256', $payload, $webhookSecret);
+        }
+
         return $this->call(
             'POST',
             $url,
             [],
             [],
             [],
-            ['CONTENT_TYPE' => 'application/json'],
+            $server,
             $payload,
         );
     }

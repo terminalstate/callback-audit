@@ -132,3 +132,16 @@ payment." (https://razorpay.com/docs/webhooks/)
 
 Default run of this file: 2 tests OK. `--group if-fixed`: 1 failure, as expected while the bug is present. The Razorpay
 files above are unchanged on v5-develop as of 2026-10-27.
+
+### Against the fix (invoiceninja PR #13397)
+
+The PR adds a `webhookSecret` gateway field and verifies `X-Razorpay-Signature`; the if-fixed test signs its body with
+that secret. To run this file against the PR branch:
+
+```bash
+INVOICENINJA_REPO=https://github.com/terminalstate/invoiceninja.git \
+INVOICENINJA_COMMIT=7a818ce34aa24fb4265b599f3a7199895cf32f34 bash run.sh /path/to/empty-dir
+```
+
+At 7a818ce the if-fixed test passes and the current-behaviour test fails, as expected: with no webhook secret the
+webhook is ignored but answered with a JSON `[]` body instead of an empty one. The control passes at both commits.
