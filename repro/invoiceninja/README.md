@@ -10,7 +10,7 @@ suite (`MockAccountData`, `DatabaseTransactions`, the project's `phpunit.xml`):
   ACH, GoCardless, …) is never completed after the payment settles. Reported in
   [#13343](https://github.com/invoiceninja/invoiceninja/issues/13343).
 - `RazorpayWebhookStubStandTest.php`: the Razorpay webhook handler is an empty stub, so a payment whose browser never
-  posts back is never recorded.
+  posts back is never recorded. Reported in [#13394](https://github.com/invoiceninja/invoiceninja/issues/13394).
 
 ```
 DB_DATABASE=ninja_stand bash run.sh [WORK_DIR]     # invoiceninja v5-develop at 493c388
@@ -97,7 +97,7 @@ recurring invoice, so the subscription is never billed again. A card purchase of
 
 Default run of this file: 2 tests OK. `--group if-fixed`: 1 failure, as expected while the bug is present.
 
-## Razorpay webhook is an empty stub
+## Razorpay webhook is an empty stub (#13394)
 
 No provider HTTP call is faked.
 
