@@ -2,6 +2,7 @@
 
 One mocha file that runs in the test setup of [opencollective-api](https://github.com/opencollective/opencollective-api)
 (real Postgres, the project's own fixtures and helpers), next to its Stripe webhook tests.
+Reported in [opencollective/opencollective#9041](https://github.com/opencollective/opencollective/issues/9041).
 
 ```
 PGHOST=127.0.0.1 PGPORT=5432 bash run.sh [WORK_DIR]   # opencollective-api main as of 2026-10-28; OC_API_COMMIT=… for another commit
