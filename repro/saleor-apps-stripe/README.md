@@ -2,6 +2,7 @@
 
 One vitest file that runs in the Stripe app's own unit project (`apps/stripe` in
 [saleor/apps](https://github.com/saleor/apps)), next to the app's tests for `TRANSACTION_PROCESS_SESSION`.
+Reported in [saleor/apps#2448](https://github.com/saleor/apps/issues/2448).
 
 ```
 bash run.sh [WORK_DIR]          # saleor/apps main as of 2026-10-28; SALEOR_APPS_COMMIT=… for another commit
