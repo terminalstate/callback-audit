@@ -2,6 +2,7 @@
 
 One pytest module that runs in the test setup of [liberapay.com](https://github.com/liberapay/liberapay.com)
 (`tests/py`, real Postgres, the project's own `Harness`), plus the two candidate fixes as patches.
+Reported in [liberapay/liberapay.com#2827](https://github.com/liberapay/liberapay.com/issues/2827).
 
 ```
 LIBERAPAY_DIR=<checkout> PYTHON=<python> PSQL=<psql> DATABASE_URL="host=... port=... user=... dbname=..." ./run.sh
