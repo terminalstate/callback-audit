@@ -1,0 +1,23 @@
+diff --git a/www/callbacks/stripe.spt b/www/callbacks/stripe.spt
+index 02506c7..ae6572c 100644
+--- a/www/callbacks/stripe.spt
++++ b/www/callbacks/stripe.spt
+@@ -48,6 +48,18 @@ if event_object_type == 'charge':
+     if payin.status == 'succeeded' and not charge.captured:
+         raise response.error(200, "This callback is too late.")
+     payin = settle_charge(website.db, payin, charge)
++    if payin.status == 'succeeded':
++        # `execute_transfer()` leaves a transfer in `pending` when Stripe refused
++        # or failed to create it. Ask Stripe to send this event again later.
++        unexecuted_transfers = website.db.one("""
++            SELECT count(*)
++              FROM payin_transfers
++             WHERE payin = %s
++               AND status = 'pending'
++               AND remote_id IS NULL
++        """, (payin.id,))
++        if unexecuted_transfers:
++            raise response.error(500, "Executing the transfers failed, please retry.")
+ 
+ elif event_object_type == 'charge.dispute':
+     dispute = event.data.object

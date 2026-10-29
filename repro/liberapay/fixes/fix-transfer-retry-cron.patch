@@ -1,0 +1,77 @@
+diff --git a/liberapay/main.py b/liberapay/main.py
+index 0a5f892..2ddc8dd 100644
+--- a/liberapay/main.py
++++ b/liberapay/main.py
+@@ -45,7 +45,8 @@ from liberapay.models.repository import refetch_repos
+ from liberapay.payin import paypal
+ from liberapay.payin.cron import (
+     detect_stuck_payins, execute_reviewed_payins, execute_scheduled_payins,
+-    reschedule_renewals, send_upcoming_debit_notifications,
++    reschedule_renewals, retry_unexecuted_stripe_transfers,
++    send_upcoming_debit_notifications,
+ )
+ from liberapay.security import authentication, csrf, set_default_security_headers
+ from liberapay.security.csp import csp_allow
+@@ -207,6 +208,7 @@ if conf:
+     if conf.ses_feedback_queue_url:
+         cron(intervals.get('fetch_email_bounces', 60), handle_email_bounces, True)
+     cron(intervals.get('execute_reviewed_payins', 3600), execute_reviewed_payins, True)
++    cron(intervals.get('retry_unexecuted_stripe_transfers', 3600), retry_unexecuted_stripe_transfers, True)
+ 
+     cron('irregular', website.cryptograph.rotate_stored_data, True)
+ 
+diff --git a/liberapay/payin/cron.py b/liberapay/payin/cron.py
+index 5c9ceaf..f4f699c 100644
+--- a/liberapay/payin/cron.py
++++ b/liberapay/payin/cron.py
+@@ -4,6 +4,7 @@ from operator import itemgetter
+ from time import sleep
+ 
+ from pando import json
++import stripe
+ 
+ from ..billing.payday import compute_next_payday_date
+ from ..constants import STRIPE_TRANSFER_COUNTRIES
+@@ -18,7 +19,7 @@ from ..website import website
+ from ..utils import utcnow
+ from ..utils.types import Object
+ from .common import prepare_payin, resolve_tip, update_payin
+-from .stripe import charge
++from .stripe import charge, settle_charge
+ 
+ 
+ def reschedule_renewals():
+@@ -623,3 +624,33 @@ def execute_reviewed_payins():
+     for payin, payer, route in payins:
+         route.__dict__['participant'] = payer
+         charge(website.db, payin, payer, route)
++
++
++def retry_unexecuted_stripe_transfers():
++    """Retry the Stripe transfers that couldn't be executed when their charge succeeded.
++
++    `execute_transfer()` leaves a transfer in `pending` without a `remote_id`
++    when Stripe refuses or fails to create it. Settling the charge again
++    retries it (the idempotency key is per transfer).
++    """
++    db = website.db
++    payins = db.all("""
++        SELECT pi
++          FROM payins pi
++          JOIN exchange_routes r ON r.id = pi.route
++         WHERE pi.status = 'succeeded'
++           AND r.network::text LIKE 'stripe-%%'
++           AND pi.id IN (
++                   SELECT pt.payin
++                     FROM payin_transfers pt
++                    WHERE pt.status = 'pending'
++                      AND pt.remote_id IS NULL
++               )
++           AND pi.ctime < (current_timestamp - interval '1 hour')
++      ORDER BY pi.id
++    """)
++    for payin in payins:
++        try:
++            settle_charge(db, payin, stripe.Charge.retrieve(payin.remote_id))
++        except Exception as e:
++            website.tell_sentry(e)
