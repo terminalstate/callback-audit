@@ -2,6 +2,7 @@
 
 A real WordPress site with [GiveWP](https://github.com/impress-org/givewp) and a real POST to `/?give-listener=stripe`.
 `listen()` reads `php://input` and ends with `exit`, so it can't run inside PHPUnit.
+Reported in [impress-org/givewp#8528](https://github.com/impress-org/givewp/issues/8528).
 
 ```
 DB_HOST=127.0.0.1:3306 DB_USER=root DB_PASSWORD=... bash run.sh [WORK_DIR]   # GiveWP develop as of 2026-10-28 (4.19.1); GIVEWP_COMMIT=… for another commit
