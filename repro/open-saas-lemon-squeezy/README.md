@@ -48,6 +48,8 @@ leaves the stored URL untouched when it is `undefined`.
 
 ## Second finding: a subscription that expires keeps its access
 
+Reported in [wasp-lang/open-saas#765](https://github.com/wasp-lang/open-saas/issues/765).
+
 `tests/lemonSqueezyExpired.test.ts`. The template's setup docs (`lemon-squeezy.mdx`, `deploying.mdx`) tell the merchant to
 send `order_created`, `subscription_created`, `subscription_updated` and `subscription_cancelled`, but not
 `subscription_expired`. When a cancelled subscription's grace period ends, Lemon Squeezy then reports it as
