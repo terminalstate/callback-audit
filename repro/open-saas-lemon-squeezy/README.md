@@ -1,4 +1,4 @@
-# Harness: Open SaaS with Lemon Squeezy, a credits purchase by a customer without a subscription is never added
+# Harness: Open SaaS with Lemon Squeezy: credits without a subscription; access after a subscription expires
 
 The template's `template/app/src/payment/lemonSqueezy/webhook.ts` runs under vitest with the real
 `@lemonsqueezy/lemonsqueezy.js` SDK. Wasp's generated modules (`wasp/server`, `wasp/server/api`) and `@prisma/client`
@@ -7,7 +7,7 @@ HMAC `X-Signature`.
 Reported in [wasp-lang/open-saas#755](https://github.com/wasp-lang/open-saas/issues/755).
 
 ```
-bash run.sh [WORK_DIR]          # open-saas main as of 2026-10-20; OPENSAAS_COMMIT=… for another commit
+bash run.sh [WORK_DIR]          # open-saas main as of 2026-10-28; OPENSAAS_COMMIT=… for another commit
 ```
 
 Needs git, Node 20+ and npm (about 60 MB in `WORK_DIR`).
@@ -45,3 +45,22 @@ Run on 2026-10-20 (Node 22, vitest 4.1.12):
 
 `fix.patch` returns the portal URL as optional instead of throwing; `updateUserLemonSqueezyPaymentDetails` already
 leaves the stored URL untouched when it is `undefined`.
+
+## Second finding: a subscription that expires keeps its access
+
+`tests/lemonSqueezyExpired.test.ts`. The template's setup docs (`lemon-squeezy.mdx`, `deploying.mdx`) tell the merchant to
+send `order_created`, `subscription_created`, `subscription_updated` and `subscription_cancelled`, but not
+`subscription_expired`. When a cancelled subscription's grace period ends, Lemon Squeezy then reports it as
+`subscription_updated` with `status: "expired"`. `handleSubscriptionUpdated` only acts on `active` and `past_due`, so the
+user stays `cancel_at_period_end`, which `isUserSubscribed` and the account page treat as subscribed.
+
+Run on 2026-10-30 (Node 24, vitest 4.1.12), open-saas `c2c6285` (2026-10-28):
+
+```
+== subscription_updated with status expired (template docs list no subscription_expired)
+     × ends the user's access when the subscription expires
+       expected "vi.fn()" to be called with arguments: [ ObjectContaining{ data: ObjectContaining{ subscriptionStatus: "deleted" } } ]
+```
+
+With `expired` handled in `subscription_updated` (the same update `handleSubscriptionExpired` makes) the test passes.
+

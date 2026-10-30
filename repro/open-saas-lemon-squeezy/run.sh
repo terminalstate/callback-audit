@@ -7,7 +7,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 WORK="${1:-$(mktemp -d)}"
-COMMIT="${OPENSAAS_COMMIT:-5859df70e93ddd04d183323934e9c9e2ae1c81c5}"   # main on 2026-10-20
+COMMIT="${OPENSAAS_COMMIT:-c2c6285bdb14b040584505372ad9bb062a0bca11}"   # main on 2026-10-28
 mkdir -p "$WORK" && WORK="$(cd "$WORK" && pwd)" && cd "$WORK"
 if [ ! -d src/.git ]; then
   git init -q src; git -C src remote add origin https://github.com/wasp-lang/open-saas
@@ -22,6 +22,8 @@ cp -r "$HERE/mocks" "$HERE/tests" "$HERE/vitest.config.ts" .
   vitest@4.1.12 zod@4 express@5 @lemonsqueezy/lemonsqueezy.js@3.3.1
 echo "== open-saas at $(git -C src log -1 --format='%h %cs'), @lemonsqueezy/lemonsqueezy.js $(node -p "require('./node_modules/@lemonsqueezy/lemonsqueezy.js/package.json').version")"
 npx vitest run tests/lemonSqueezyCredits.test.ts || true
+echo "== subscription_updated with status expired (template docs list no subscription_expired)"
+npx vitest run tests/lemonSqueezyExpired.test.ts || true
 echo "== with fix.patch"
 (cd app && git init -q && git apply -p3 "$HERE/fix.patch")
 npx vitest run tests/lemonSqueezyCredits.test.ts
