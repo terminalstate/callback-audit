@@ -3,6 +3,7 @@
 Three reproductions in the project's own RSpec suite, run at `main` as of 2026-10-17. The files these paths go through
 (the Adyen webhook controller, `HandleEventService`, `Webhooks::ChargebackService`, the job) are unchanged on `main` as of 2026-10-30. Each goes through the real webhook
 endpoint, the real signature check and the real jobs; only Flutterwave's verify endpoint is answered by WebMock.
+The Adyen CHARGEBACK case is reported in [getlago/lago-api#6960](https://github.com/getlago/lago-api/issues/6960).
 
 ## What it shows
 
