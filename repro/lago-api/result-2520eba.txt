@@ -1,0 +1,35 @@
+WebhooksController Adyen CHARGEBACK
+  current behaviour: the delivery is accepted and queued
+  current behaviour: the queued job raises on every run, so Adyen's accepted CHARGEBACK is never recorded
+  current behaviour: given the full notification, the dispute's pspReference does not find the disputed payment
+  if fixed: a lost CHARGEBACK marks the invoice's dispute as lost (PENDING: fails while the bug is present)
+
+WebhooksController Flutterwave charge.completed when verification fails
+  control: when the verify call succeeds, the invoice is paid
+  current behaviour: when the verify call answers 503 once, the paid charge is dropped and nothing is retried
+  if fixed: a transient verify failure is retried and the invoice ends up paid (PENDING: fails while the bug is present)
+
+WebhooksController refund failed after success
+  Stripe charge.refund.updated
+    when the refund was still pending (control)
+      marks the credit note's refund as failed and sends credit_note.provider_refund_failure
+    when the refund had already succeeded
+      current behaviour: the failure is ignored, the credit note stays refunded and no webhook is sent
+      if fixed: the credit note's refund is marked failed and credit_note.provider_refund_failure is sent (PENDING: fails while the bug is present)
+  Adyen REFUND_FAILED
+    current behaviour: Adyen's REFUND_FAILED after a successful REFUND is ignored
+
+Finished in 2.01 seconds (files took 14.09 seconds to load)
+11 examples, 0 failures, 3 pending
+
+lago-api: 2520eba5856695c343a69e626d05a077f5ef9ba0 (2026-10-17)
+ruby: ruby 4.0.6 (2026-07-14 revision 03b6d3f889) +PRISM [x86_64-linux]
+bundler: 4.0.16
+rails: 8.1.4
+rspec-core: 3.13.6
+stripe: 6.5.0
+adyen-ruby-api-library: 7.3.1
+sidekiq: 7.3.10
+webmock: 3.26.2
+postgres: 16.15
+redis: v=7.0.15
