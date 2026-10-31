@@ -1,5 +1,7 @@
 # LearnPress: PayPal subscription webhook answers HTTP 200 to every failure
 
+Reported in [LearnPress/learnpress#650](https://github.com/LearnPress/learnpress/issues/650).
+
 `/wp-json/lp/v1/gateways/{gateway}/subscription-webhook` catches every `Throwable` in `listen_subscription_webhook()` and returns a
 plain `LearnPress\Helpers\Response` object, which WordPress REST sends with status 200. PayPal re-sends a webhook only when the answer is
 not 2xx, so a subscription activation or renewal (`PAYMENT.SALE.COMPLETED`) that meets a temporary error is never delivered again.
