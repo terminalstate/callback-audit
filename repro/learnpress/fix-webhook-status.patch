@@ -1,0 +1,37 @@
+diff --git a/inc/rest-api/v1/frontend/class-lp-rest-gateway-webhook-controller.php b/inc/rest-api/v1/frontend/class-lp-rest-gateway-webhook-controller.php
+index a7ba967..88c1790 100644
+--- a/inc/rest-api/v1/frontend/class-lp-rest-gateway-webhook-controller.php
++++ b/inc/rest-api/v1/frontend/class-lp-rest-gateway-webhook-controller.php
+@@ -51,12 +51,13 @@ if ( ! class_exists( 'LP_REST_Gateway_Webhook_Controller' ) ) {
+ 		 *
+ 		 * @param WP_REST_Request $request
+ 		 *
+-		 * @return Response
++		 * @return WP_REST_Response
+ 		 * @since 4.3.7
+-		 * @version 1.0.2
++		 * @version 1.0.3
+ 		 */
+-		public function listen_subscription_webhook( WP_REST_Request $request ): Response {
++		public function listen_subscription_webhook( WP_REST_Request $request ): WP_REST_Response {
+ 			$response   = new Response();
++			$status     = 200;
+ 			$gateway_id = sanitize_key( (string) $request->get_param( 'gateway' ) );
+ 
+ 			try {
+@@ -84,9 +85,14 @@ if ( ! class_exists( 'LP_REST_Gateway_Webhook_Controller' ) ) {
+ 				LP_Debug::log_to_comment( 'Webhook error: ' . $gateway_id . ' - ' . $e->getMessage() );
+ 				LP_Debug::error_log( $e );
+ 				$response->message = $e->getMessage();
++
++				// Providers re-send a webhook only on a non-2xx answer: keep the 4xx a rejected
++				// request was given, and answer 500 to anything else so the event comes back.
++				$code   = (int) $e->getCode();
++				$status = ( $code >= 400 && $code < 500 ) ? $code : 500;
+ 			}
+ 
+-			return $response;
++			return new WP_REST_Response( $response, $status );
+ 		}
+ 	}
+ }

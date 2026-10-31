@@ -1,0 +1,1 @@
+{"id":"WH-STAND-1","event_version":"1.0","create_time":"2026-10-13T09:00:00Z","resource_type":"sale","event_type":"PAYMENT.SALE.COMPLETED","summary":"Payment completed for $ 29.0 USD","resource":{"id":"8RS6210148826550S","state":"completed","amount":{"total":"29.00","currency":"USD"},"billing_agreement_id":"I-STAND1234567","custom":"123","create_time":"2026-10-13T08:59:58Z"}}
